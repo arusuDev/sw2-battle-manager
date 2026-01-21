@@ -10,16 +10,14 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  query,
-  where,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { 
-  Room, 
-  RoomData, 
-  RoomMember, 
+import type {
+  Room,
+  RoomData,
+  RoomMember,
   RoomMemberData,
   CreateRoomInput,
   JoinRoomInput,
@@ -69,13 +67,13 @@ export const createRoom = async (
     roomId = generateRoomId();
     attempts++;
   }
-  
+
   if (attempts >= 10) {
     throw new Error('ルームIDの生成に失敗しました。再度お試しください。');
   }
 
   const now = serverTimestamp();
-  
+
   // ルームデータ
   const roomData: RoomData = {
     name: input.name,
@@ -98,7 +96,7 @@ export const createRoom = async (
     unlockedPasswords: [],
     joinedAt: now as Timestamp,
   };
-  
+
   const memberRef = doc(db, 'rooms', roomId, 'members', userId);
   await setDoc(memberRef, memberData);
 
@@ -114,11 +112,11 @@ export const createRoom = async (
 export const getRoom = async (roomId: string): Promise<Room | null> => {
   const roomRef = doc(db, 'rooms', roomId.toUpperCase());
   const roomSnap = await getDoc(roomRef);
-  
+
   if (!roomSnap.exists()) {
     return null;
   }
-  
+
   return {
     id: roomSnap.id,
     ...roomSnap.data(),
@@ -133,7 +131,7 @@ export const joinRoom = async (
   userId: string
 ): Promise<Room> => {
   const roomId = input.roomId.toUpperCase();
-  
+
   // ルーム存在チェック
   const room = await getRoom(roomId);
   if (!room) {
@@ -143,7 +141,7 @@ export const joinRoom = async (
   // 既存メンバーかチェック
   const memberRef = doc(db, 'rooms', roomId, 'members', userId);
   const memberSnap = await getDoc(memberRef);
-  
+
   if (memberSnap.exists()) {
     // 既に参加済み → 名前だけ更新
     await updateDoc(memberRef, {
@@ -186,7 +184,7 @@ export const subscribeToRoom = (
   callback: (room: Room | null) => void
 ) => {
   const roomRef = doc(db, 'rooms', roomId);
-  
+
   return onSnapshot(roomRef, (snap) => {
     if (snap.exists()) {
       callback({
@@ -207,7 +205,7 @@ export const subscribeToMembers = (
   callback: (members: RoomMember[]) => void
 ) => {
   const membersRef = collection(db, 'rooms', roomId, 'members');
-  
+
   return onSnapshot(membersRef, (snap) => {
     const members = snap.docs.map((doc) => ({
       odId: doc.id,
@@ -227,13 +225,13 @@ export const subscribeToMembers = (
 export const advanceRound = async (roomId: string): Promise<void> => {
   const roomRef = doc(db, 'rooms', roomId);
   const roomSnap = await getDoc(roomRef);
-  
+
   if (!roomSnap.exists()) {
     throw new Error('ルームが見つかりません');
   }
-  
+
   const currentRound = roomSnap.data().currentRound || 1;
-  
+
   await updateDoc(roomRef, {
     currentRound: currentRound + 1,
     updatedAt: serverTimestamp(),
@@ -248,7 +246,7 @@ export const setPartyBuff = async (
   partyBuff: Room['partyBuff']
 ): Promise<void> => {
   const roomRef = doc(db, 'rooms', roomId);
-  
+
   await updateDoc(roomRef, {
     partyBuff,
     updatedAt: serverTimestamp(),
@@ -270,7 +268,7 @@ export const addCharacter = async (
   ownerId: string | null = null
 ): Promise<void> => {
   const charRef = doc(db, 'rooms', roomId, 'characters', character.id);
-  
+
   await setDoc(charRef, {
     ...character,
     ownerId,
@@ -287,7 +285,7 @@ export const updateCharacter = async (
   character: Character
 ): Promise<void> => {
   const charRef = doc(db, 'rooms', roomId, 'characters', character.id);
-  
+
   await updateDoc(charRef, {
     ...character,
     updatedAt: serverTimestamp(),
@@ -313,7 +311,7 @@ export const subscribeToCharacters = (
   callback: (characters: Character[]) => void
 ) => {
   const charsRef = collection(db, 'rooms', roomId, 'characters');
-  
+
   return onSnapshot(charsRef, (snap) => {
     const characters = snap.docs.map((doc) => ({
       ...doc.data(),

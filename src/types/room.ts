@@ -33,11 +33,11 @@ export interface RoomMember {
 export type RoomMemberData = Omit<RoomMember, 'odId'>;
 
 // ルーム内キャラクター（既存のCharacterを拡張）
-export interface RoomCharacter extends Character {
+export type RoomCharacter = Character & {
   ownerId: string | null;  // null = 敵（GMが操作）
   createdAt: Timestamp;
   updatedAt: Timestamp;
-}
+};
 
 // ルーム作成時の入力
 export interface CreateRoomInput {
@@ -55,7 +55,7 @@ export interface JoinRoomInput {
 export interface RoomState {
   room: Room | null;
   members: RoomMember[];
-  characters: RoomCharacter[];
+  characters: Character[];  // UIではCharacterとして扱う
   currentMember: RoomMember | null;
   isGM: boolean;
   loading: boolean;
