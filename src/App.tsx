@@ -1,14 +1,14 @@
 // ============================================
-// SW2.0 戦闘管理システム - メインアプリ
+// SW2.0 戦闘管理システム - メインアプリ（Firebase統合版）
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type {
   Character,
-  Buff,
   PartyBuff,
   ExpiredBuffNotification
 } from './types';
+import type { Room } from './types/room';
 import { isMultiPartEnemy } from './types';
 import { CharacterCard, MultiPartEnemyCard } from './components/characters';
 import {
@@ -18,124 +18,137 @@ import {
   KohoModal,
   TemplateSelectModal
 } from './components/modals';
+import { RoomEntry, RoomHeader } from './components/room';
+import { RoomProvider, useRoom } from './contexts/RoomContext';
 
-export default function App() {
+// ============================================
+// 戦闘画面（既存のメイン部分）
+// ============================================
+function BattleScreen() {
+  const { 
+    room, 
+    isGM, 
+    characters,
+    nextRound, 
+    updatePartyBuff,
+    addCharacter,
+    updateCharacter,
+    deleteCharacter,
+    addBuff,
+    removeBuff,
+  } = useRoom();
+
   // ============================================
-  // State
+  // Local State（UI用）
   // ============================================
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [round, setRound] = useState(1);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [addingBuffChar, setAddingBuffChar] = useState<Character | null>(null);
   const [expiredBuffs, setExpiredBuffs] = useState<ExpiredBuffNotification[]>([]);
   const [partyBuff, setPartyBuff] = useState<PartyBuff | null>(null);
   const [showKohoModal, setShowKohoModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [prevRound, setPrevRound] = useState(room?.currentRound ?? 1);
+
+  // ルームのラウンド（Firestoreから同期）
+  const round = room?.currentRound ?? 1;
+
+  // ルームの鼓咆を同期
+  useEffect(() => {
+    if (room?.partyBuff !== undefined) {
+      setPartyBuff(room.partyBuff);
+    }
+  }, [room?.partyBuff]);
 
   // ============================================
-  // Character Management
+  // ラウンド進行時のバフ処理
   // ============================================
-  const addCharacter = (char: Character) => {
-    setCharacters(prev => [...prev, char]);
-  };
+  useEffect(() => {
+    // ラウンドが進んだ時のみ処理
+    if (round > prevRound) {
+      const newExpired: ExpiredBuffNotification[] = [];
 
-  const updateCharacter = (updated: Character) => {
-    setCharacters(prev => prev.map(c => c.id === updated.id ? updated : c));
-  };
+      // 全キャラのバフを減少させる
+      characters.forEach(async (char) => {
+        const newBuffs = (char.buffs || []).map(buff => ({
+          ...buff,
+          remaining: buff.remaining - 1
+        })).filter(buff => {
+          if (buff.remaining <= 0) {
+            newExpired.push({ charName: char.name, buffName: buff.name });
+            return false;
+          }
+          return true;
+        });
 
-  const deleteCharacter = (id: string) => {
-    setCharacters(prev => prev.filter(c => c.id !== id));
-  };
-
-  // ============================================
-  // Buff Management
-  // ============================================
-  const addBuff = (charId: string, buff: Buff) => {
-    setCharacters(prev => prev.map(c => {
-      if (c.id === charId) {
-        return { ...c, buffs: [...(c.buffs || []), buff] };
-      }
-      return c;
-    }));
-  };
-
-  const removeBuff = (charId: string, buffId: string) => {
-    setCharacters(prev => prev.map(c => {
-      if (c.id === charId) {
-        return { ...c, buffs: (c.buffs || []).filter(b => b.id !== buffId) };
-      }
-      return c;
-    }));
-  };
-
-  // ============================================
-  // Round Management
-  // ============================================
-  const advanceRound = () => {
-    const newExpired: ExpiredBuffNotification[] = [];
-
-    setCharacters(prev => prev.map(char => {
-      const newBuffs = (char.buffs || []).map(buff => ({
-        ...buff,
-        remaining: buff.remaining - 1
-      })).filter(buff => {
-        if (buff.remaining <= 0) {
-          newExpired.push({ charName: char.name, buffName: buff.name });
-          return false;
+        // バフが変更されたら更新
+        if (JSON.stringify(newBuffs) !== JSON.stringify(char.buffs)) {
+          await updateCharacter({ ...char, buffs: newBuffs });
         }
-        return true;
       });
-      return { ...char, buffs: newBuffs };
-    }));
 
-    if (newExpired.length > 0) {
-      setExpiredBuffs(newExpired);
-      setTimeout(() => setExpiredBuffs([]), 5000);
+      if (newExpired.length > 0) {
+        setExpiredBuffs(newExpired);
+        setTimeout(() => setExpiredBuffs([]), 5000);
+      }
     }
+    setPrevRound(round);
+  }, [round, prevRound, characters, updateCharacter]);
 
-    setRound(r => r + 1);
+  // ============================================
+  // Character Handlers（Firestore経由）
+  // ============================================
+  const handleAddCharacter = async (char: Character) => {
+    await addCharacter(char);
   };
 
-  const revertRound = () => {
-    if (round > 1) {
-      setRound(r => r - 1);
-    }
+  const handleUpdateCharacter = async (updated: Character) => {
+    await updateCharacter(updated);
+  };
+
+  const handleDeleteCharacter = async (id: string) => {
+    await deleteCharacter(id);
+  };
+
+  // ============================================
+  // Buff Handlers（Firestore経由）
+  // ============================================
+  const handleAddBuff = async (charId: string, buff: any) => {
+    await addBuff(charId, buff);
+  };
+
+  const handleRemoveBuff = async (charId: string, buffId: string) => {
+    await removeBuff(charId, buffId);
   };
 
   // ============================================
   // Damage Application
   // ============================================
-  const applyDamageToTarget = (targetId: string, targetPartId: string, damage: number) => {
-    setCharacters(prev => prev.map(char => {
-      if (char.id !== targetId) return char;
+  const applyDamageToTarget = async (targetId: string, targetPartId: string, damage: number) => {
+    const char = characters.find(c => c.id === targetId);
+    if (!char) return;
 
-      if (isMultiPartEnemy(char) && targetPartId) {
-        // 複数部位の敵
-        const newParts = char.parts.map(p => {
-          if (p.id === targetPartId) {
-            return { ...p, hp: { ...p.hp, current: p.hp.current - damage } };
-          }
-          return p;
-        });
-        return { ...char, parts: newParts };
-      } else if ('hp' in char) {
-        // 単体の敵
-        return { ...char, hp: { ...char.hp, current: char.hp.current - damage } };
-      }
-      return char;
-    }));
+    if (isMultiPartEnemy(char) && targetPartId) {
+      const newParts = char.parts.map(p => {
+        if (p.id === targetPartId) {
+          return { ...p, hp: { ...p.hp, current: p.hp.current - damage } };
+        }
+        return p;
+      });
+      await updateCharacter({ ...char, parts: newParts });
+    } else if ('hp' in char) {
+      await updateCharacter({ 
+        ...char, 
+        hp: { ...char.hp, current: char.hp.current - damage } 
+      });
+    }
   };
 
   // ============================================
-  // Reset
+  // 鼓咆の更新（Firestore連携）
   // ============================================
-  const resetAll = () => {
-    if (window.confirm('すべてのデータをリセットしますか？')) {
-      setCharacters([]);
-      setRound(1);
-      setPartyBuff(null);
-      setExpiredBuffs([]);
-    }
+  const handleSetPartyBuff = async (buff: PartyBuff | null) => {
+    setPartyBuff(buff);
+    await updatePartyBuff(buff);
   };
 
   // ============================================
@@ -151,7 +164,7 @@ export default function App() {
     <div className="min-h-screen bg-stone-950 text-stone-100">
       {/* 期限切れバフ通知 */}
       {expiredBuffs.length > 0 && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 
           bg-amber-900/90 text-amber-100 px-4 py-2 rounded-lg shadow-lg
           border border-amber-700 max-w-sm"
         >
@@ -164,51 +177,32 @@ export default function App() {
         </div>
       )}
 
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-10 bg-stone-950/95 border-b border-stone-800">
+      {/* ルームヘッダー（Firebase連携） */}
+      <RoomHeader />
+
+      {/* ラウンド操作 */}
+      <div className="sticky top-12 z-10 bg-stone-950/95 border-b border-stone-800">
         <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-transparent bg-clip-text 
-              bg-gradient-to-r from-amber-400 to-orange-400"
-              style={{ fontFamily: 'serif' }}>
-              SW2.0 戦闘管理
-            </h1>
-
-            <button
-              onClick={resetAll}
-              className="text-sm text-stone-500 active:text-red-400 px-2 py-1"
-            >
-              リセット
-            </button>
-          </div>
-
-          {/* ラウンドカウンター */}
-          <div className="flex items-center justify-center gap-4 mt-2">
-            <button
-              onClick={revertRound}
-              disabled={round <= 1}
-              className="w-10 h-10 flex items-center justify-center bg-stone-800 
-                active:bg-stone-700 disabled:opacity-50 rounded-full transition-colors text-stone-300 text-xl"
-            >
-              −
-            </button>
+          <div className="flex items-center justify-center gap-4">
             <div className="text-center">
               <div className="text-xs text-stone-500">ROUND</div>
               <div className="text-3xl font-bold text-amber-400">{round}</div>
             </div>
-            <button
-              onClick={advanceRound}
-              className="w-10 h-10 flex items-center justify-center bg-amber-700 
-                active:bg-amber-600 rounded-full transition-colors text-white text-xl"
-            >
-              ＋
-            </button>
+            {isGM && (
+              <button
+                onClick={nextRound}
+                className="px-4 py-2 bg-amber-700 active:bg-amber-600 
+                  rounded-lg transition-colors text-white text-sm font-medium"
+              >
+                次のラウンドへ ▶
+              </button>
+            )}
           </div>
           <p className="text-center text-xs text-stone-600 mt-1">
-            ＋でラウンド進行（バフ自動カウント）
+            {isGM ? 'GMのみラウンドを進行できます' : 'GMがラウンドを進行します'}
           </p>
         </div>
-      </header>
+      </div>
 
       {/* 鼓咆（全体バフ）エリア */}
       <div className="max-w-4xl mx-auto px-4 pt-3">
@@ -246,7 +240,7 @@ export default function App() {
           <div className="text-center py-12">
             <p className="text-stone-500 mb-6">キャラクターがいません</p>
             <div className="flex flex-col gap-3">
-              <AddCharacterForm onAdd={addCharacter} />
+              <AddCharacterForm onAdd={handleAddCharacter} />
               <button
                 onClick={() => setShowTemplateModal(true)}
                 className="w-full py-4 border-2 border-dashed border-amber-600/50 rounded-lg
@@ -272,11 +266,11 @@ export default function App() {
                     <CharacterCard
                       key={char.id}
                       character={char}
-                      onUpdate={updateCharacter}
-                      onDelete={deleteCharacter}
+                      onUpdate={handleUpdateCharacter}
+                      onDelete={handleDeleteCharacter}
                       onEditStats={setEditingChar}
                       onAddBuff={setAddingBuffChar}
-                      onRemoveBuff={removeBuff}
+                      onRemoveBuff={handleRemoveBuff}
                       enemies={enemies}
                       partyBuff={partyBuff}
                       onApplyDamage={applyDamageToTarget}
@@ -299,19 +293,19 @@ export default function App() {
                       <MultiPartEnemyCard
                         key={char.id}
                         character={char}
-                        onUpdate={(updated) => updateCharacter(updated)}
-                        onDelete={deleteCharacter}
+                        onUpdate={handleUpdateCharacter}
+                        onDelete={handleDeleteCharacter}
                         onAddBuff={setAddingBuffChar}
-                        onRemoveBuff={removeBuff}
+                        onRemoveBuff={handleRemoveBuff}
                       />
                     ) : (
                       <CharacterCard
                         key={char.id}
                         character={char}
-                        onUpdate={updateCharacter}
-                        onDelete={deleteCharacter}
+                        onUpdate={handleUpdateCharacter}
+                        onDelete={handleDeleteCharacter}
                         onAddBuff={setAddingBuffChar}
-                        onRemoveBuff={removeBuff}
+                        onRemoveBuff={handleRemoveBuff}
                       />
                     )
                   ))}
@@ -321,7 +315,7 @@ export default function App() {
 
             {/* キャラ追加ボタン */}
             <div className="flex flex-col gap-3">
-              <AddCharacterForm onAdd={addCharacter} />
+              <AddCharacterForm onAdd={handleAddCharacter} />
               <button
                 onClick={() => setShowTemplateModal(true)}
                 className="w-full py-4 border-2 border-dashed border-amber-600/50 rounded-lg
@@ -340,7 +334,7 @@ export default function App() {
       {editingChar && (
         <CharacterEditModal
           character={editingChar}
-          onSave={updateCharacter}
+          onSave={handleUpdateCharacter}
           onClose={() => setEditingChar(null)}
         />
       )}
@@ -348,7 +342,7 @@ export default function App() {
       {addingBuffChar && (
         <AddBuffModal
           character={addingBuffChar}
-          onAdd={addBuff}
+          onAdd={handleAddBuff}
           onClose={() => setAddingBuffChar(null)}
         />
       )}
@@ -356,21 +350,53 @@ export default function App() {
       {showKohoModal && (
         <KohoModal
           partyBuff={partyBuff}
-          onSet={setPartyBuff}
+          onSet={handleSetPartyBuff}
           onClose={() => setShowKohoModal(false)}
         />
       )}
 
       {showTemplateModal && (
         <TemplateSelectModal
-          onAdd={addCharacter}
+          onAdd={handleAddCharacter}
           onClose={() => setShowTemplateModal(false)}
         />
       )}
 
       <footer className="text-center py-4 text-stone-600 text-sm">
-        ※ページを閉じるとデータは消えます
+        ルームID: {room?.id} | リアルタイム同期中 🔄
       </footer>
     </div>
+  );
+}
+
+// ============================================
+// メインApp（ルーム管理を含む）
+// ============================================
+export default function App() {
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+
+  // ルーム入室
+  const handleEnterRoom = (room: Room) => {
+    setCurrentRoom(room);
+  };
+
+  // ルーム退出
+  const handleExitRoom = () => {
+    setCurrentRoom(null);
+  };
+
+  // ルーム未参加 → RoomEntry表示
+  if (!currentRoom) {
+    return <RoomEntry onEnterRoom={handleEnterRoom} />;
+  }
+
+  // ルーム参加中 → 戦闘画面表示
+  return (
+    <RoomProvider 
+      roomId={currentRoom.id} 
+      onExit={handleExitRoom}
+    >
+      <BattleScreen />
+    </RoomProvider>
   );
 }

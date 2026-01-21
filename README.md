@@ -68,27 +68,22 @@ src/
 │   └── index.ts
 │
 ├── data/                # 定数データ
-│   ├── index.ts         # エクスポート
 │   ├── skills.ts        # 技能定義
 │   ├── presets.ts       # プリセット練技・鼓咆
 │   ├── powerTable.ts    # 威力表
 │   └── templates.ts     # キャラテンプレート
 │
 ├── utils/               # ユーティリティ
-│   ├── index.ts         # エクスポート
 │   ├── calc.ts          # 各種計算
 │   └── dice.ts          # ダイス処理
 │
 ├── components/
 │   ├── characters/      # キャラ関連
-│   │   ├── index.ts     # エクスポート
 │   │   ├── CharacterCard.tsx
 │   │   ├── MultiPartEnemyCard.tsx
-│   │   ├── AttackSection.tsx  # 攻撃計算UI
 │   │   └── BuffBadge.tsx
 │   │
 │   ├── modals/          # モーダル
-│   │   ├── index.ts     # エクスポート
 │   │   ├── AddCharacterForm.tsx
 │   │   ├── CharacterEditModal.tsx
 │   │   ├── AddBuffModal.tsx
@@ -96,10 +91,11 @@ src/
 │   │   └── TemplateSelectModal.tsx
 │   │
 │   └── ui/              # 共通UI
-│       ├── index.ts     # エクスポート
 │       └── StatBar.tsx
 │
-└── legacy/              # レガシーコード（参照用）
+├── hooks/               # カスタムフック（将来用）
+│
+└── firebase/            # Firebase連携（将来用）
 ```
 
 ## ライセンス
