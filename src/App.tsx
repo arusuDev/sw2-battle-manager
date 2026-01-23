@@ -1,5 +1,6 @@
 // ============================================
 // SW2.0 戦闘管理システム - メインアプリ（Firebase統合版）
+// 修正: 鼓咆の同期問題を解消
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -44,7 +45,7 @@ function BattleScreen() {
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [addingBuffChar, setAddingBuffChar] = useState<Character | null>(null);
   const [expiredBuffs, setExpiredBuffs] = useState<ExpiredBuffNotification[]>([]);
-  const [partyBuff, setPartyBuff] = useState<PartyBuff | null>(null);
+  // 削除: const [partyBuff, setPartyBuff] = useState<PartyBuff | null>(null);
   const [showKohoModal, setShowKohoModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [prevRound, setPrevRound] = useState(room?.currentRound ?? 1);
@@ -52,12 +53,15 @@ function BattleScreen() {
   // ルームのラウンド（Firestoreから同期）
   const round = room?.currentRound ?? 1;
 
-  // ルームの鼓咆を同期
-  useEffect(() => {
-    if (room?.partyBuff !== undefined) {
-      setPartyBuff(room.partyBuff);
-    }
-  }, [room?.partyBuff]);
+  // 鼓咆はFirestoreから直接取得（ローカルstateを使わない）
+  const partyBuff = room?.partyBuff ?? null;
+
+  // 削除: useEffectでの同期（これが問題の原因だった）
+  // useEffect(() => {
+  //   if (room?.partyBuff !== undefined) {
+  //     setPartyBuff(room.partyBuff);
+  //   }
+  // }, [room?.partyBuff]);
 
   // ============================================
   // ラウンド進行時のバフ処理
@@ -144,10 +148,11 @@ function BattleScreen() {
   };
 
   // ============================================
-  // 鼓咆の更新（Firestore連携）
+  // 鼓咆の更新（Firestore連携のみ）
   // ============================================
   const handleSetPartyBuff = async (buff: PartyBuff | null) => {
-    setPartyBuff(buff);
+    // ローカルstateを更新せず、Firestoreのみ更新
+    // → onSnapshotで自動的にroom.partyBuffが更新される
     await updatePartyBuff(buff);
   };
 
@@ -226,6 +231,13 @@ function BattleScreen() {
               >
                 <span className="font-medium">{partyBuff.name}</span>
                 <span className="opacity-75">{partyBuff.effect}</span>
+                {/* 鼓咆解除ボタン */}
+                <button
+                  onClick={() => handleSetPartyBuff(null)}
+                  className="ml-1 text-stone-400 hover:text-red-400"
+                >
+                  ×
+                </button>
               </div>
             ) : (
               <span className="text-xs text-stone-600">なし（攻撃系・防御系から1つずつ設定可能）</span>

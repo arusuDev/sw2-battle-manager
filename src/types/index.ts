@@ -1,5 +1,6 @@
 // ============================================
 // SW2.0 戦闘管理システム - 型定義
+// 修正: BuffTypeに'magicPower'を追加
 // ============================================
 
 // 能力値
@@ -25,11 +26,11 @@ export interface Modifiers {
   defense: number;    // 防護点
 }
 
-// バフ効果タイプ
+// バフ効果タイプ（magicPower追加）
 export type BuffType = 
   | 'hit' | 'dodge' | 'defense' 
   | 'vitResist' | 'mndResist' 
-  | 'strBonus' | 'power'
+  | 'strBonus' | 'power' | 'magicPower'
   | 'magicDefense' | 'physicalReduce' | 'magicReduce'
   | 'dex' | 'agi' | 'str' | 'vit' | 'int' | 'mnd';
 
@@ -43,7 +44,7 @@ export interface Buff {
   buffValue?: number;
 }
 
-// バフ効果の集計結果
+// バフ効果の集計結果（magicPower追加）
 export interface BuffEffects {
   hit: number;
   dodge: number;
@@ -52,6 +53,7 @@ export interface BuffEffects {
   mndResist: number;
   strBonus: number;
   power: number;
+  magicPower: number;  // 追加
   magicDefense: number;
   physicalReduce: number;
   magicReduce: number;
@@ -234,7 +236,7 @@ export const isMultiPartTemplate = (tpl: CharacterTemplate): tpl is MultiPartEne
 };
 
 // ============================================
-// ルーム関連（将来のFirebase用）
+// ルーム関連（Firebase用）
 // ============================================
 
 export interface RoomState {

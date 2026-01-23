@@ -1,9 +1,10 @@
 // ============================================
 // SW2.0 各種計算
+// 修正: magicPowerバフ対応、getMagicPowerList追加
 // ============================================
 
 import type { Buff, BuffEffects, Stats, AllyCharacter } from '../types';
-import { COMBAT_SKILLS, MAGIC_SKILLS } from '../data/skills';
+import { COMBAT_SKILLS, MAGIC_SKILLS, MAGIC_NAMES } from '../data/skills';
 
 /**
  * 能力値ボーナスを計算（能力値 ÷ 6 切り捨て）
@@ -13,7 +14,7 @@ export const calcBonus = (stat: number): number => {
 };
 
 /**
- * バフ効果の集計
+ * バフ効果の集計（magicPower追加）
  */
 export const calcBuffEffects = (buffs: Buff[]): BuffEffects => {
   const effects: BuffEffects = {
@@ -24,6 +25,7 @@ export const calcBuffEffects = (buffs: Buff[]): BuffEffects => {
     mndResist: 0,
     strBonus: 0,
     power: 0,
+    magicPower: 0,  // 追加
     magicDefense: 0,
     physicalReduce: 0,
     magicReduce: 0,
@@ -146,7 +148,8 @@ export const calcStrBonus = (
 };
 
 /**
- * 魔力を計算
+ * 魔力を計算（magicPowerバフ対応）
+ * 魔力 = 技能レベル + 知力ボーナス + 魔力バフ
  */
 export const calcMagicPower = (
   skillName: string,
@@ -157,7 +160,41 @@ export const calcMagicPower = (
   const skillLv = skillLevels[skillName] || 0;
   const baseIntBonus = calcBonus(stats.int);
   const intBuffBonus = calcBonus(buffEffects.int || 0);
-  return skillLv + baseIntBonus + intBuffBonus;
+  const magicPowerBuff = buffEffects.magicPower || 0;  // 追加
+  return skillLv + baseIntBonus + intBuffBonus + magicPowerBuff;
+};
+
+/**
+ * 習得済み魔法技能の魔力一覧を取得
+ * CharacterCardでの魔力表示用
+ */
+export interface MagicPowerInfo {
+  skillName: string;    // 技能名（ソーサラーなど）
+  magicName: string;    // 魔法名（真語魔法など）
+  level: number;        // 技能レベル
+  magicPower: number;   // 魔力
+}
+
+export const getMagicPowerList = (
+  skillLevels: Record<string, number>,
+  stats: Stats,
+  buffEffects: BuffEffects
+): MagicPowerInfo[] => {
+  const list: MagicPowerInfo[] = [];
+
+  MAGIC_SKILLS.forEach(skillName => {
+    const level = skillLevels[skillName] || 0;
+    if (level > 0) {
+      list.push({
+        skillName,
+        magicName: MAGIC_NAMES[skillName] || skillName,
+        level,
+        magicPower: calcMagicPower(skillName, skillLevels, stats, buffEffects),
+      });
+    }
+  });
+
+  return list;
 };
 
 /**

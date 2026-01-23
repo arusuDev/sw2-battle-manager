@@ -1,5 +1,6 @@
 // ============================================
 // バフ追加モーダル
+// 修正: 魔力バフタイプを追加
 // ============================================
 
 import { useState } from 'react';
@@ -12,6 +13,7 @@ interface AddBuffModalProps {
   onClose: () => void;
 }
 
+// 魔力を追加したBUFF_TYPES
 const BUFF_TYPES: { value: BuffType; label: string }[] = [
   { value: 'hit', label: '命中' },
   { value: 'dodge', label: '回避' },
@@ -20,6 +22,7 @@ const BUFF_TYPES: { value: BuffType; label: string }[] = [
   { value: 'mndResist', label: '精神抵抗' },
   { value: 'strBonus', label: '筋力B' },
   { value: 'power', label: '威力' },
+  { value: 'magicPower', label: '魔力' },  // 追加
   { value: 'magicDefense', label: '魔法防御' },
   { value: 'physicalReduce', label: '物理軽減' },
   { value: 'magicReduce', label: '魔法軽減' },
@@ -157,7 +160,7 @@ export const AddBuffModal = ({ character, onAdd, onClose }: AddBuffModalProps) =
                 type="text"
                 value={effect}
                 onChange={(e) => setEffect(e.target.value)}
-                placeholder="例: 命中+2"
+                placeholder="例: 魔力+2"
                 className="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded
                   text-stone-200 placeholder-stone-500 focus:outline-none focus:border-purple-600"
               />
@@ -191,7 +194,7 @@ export const AddBuffModal = ({ character, onAdd, onClose }: AddBuffModalProps) =
             </div>
 
             <div>
-              <label className="block text-sm text-stone-400 mb-1">持続ラウンド</label>
+              <label className="block text-sm text-stone-400 mb-1">持続R数</label>
               <input
                 type="number"
                 value={duration}
@@ -202,7 +205,7 @@ export const AddBuffModal = ({ character, onAdd, onClose }: AddBuffModalProps) =
               />
             </div>
 
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={onClose}
                 className="flex-1 py-3 bg-stone-800 text-stone-400 rounded active:bg-stone-700"
@@ -212,8 +215,8 @@ export const AddBuffModal = ({ character, onAdd, onClose }: AddBuffModalProps) =
               <button
                 onClick={handleCustomSubmit}
                 disabled={!name.trim()}
-                className="flex-1 py-3 bg-purple-700 text-white rounded active:bg-purple-600
-                  disabled:bg-stone-700 disabled:text-stone-500"
+                className="flex-1 py-3 bg-purple-600 text-white rounded 
+                  active:bg-purple-500 disabled:bg-stone-700 disabled:text-stone-500"
               >
                 追加
               </button>

@@ -1,5 +1,9 @@
 // ============================================
-// キャラクターカードコンポーネント
+// キャラクターカードコンポーネント（改良版）
+// - 削除確認ダイアログ追加
+// - 削除ボタン位置変更
+// - フェードアウトアニメーション
+// - 魔力表示セクション追加
 // ============================================
 
 import { useState } from 'react';
@@ -16,6 +20,7 @@ import {
   calcDefenseValue,
   calcVitResist,
   calcMndResist,
+  getMagicPowerList,
   getHpStatus,
   getHpBarColor,
   getHpPercent
@@ -48,6 +53,8 @@ export const CharacterCard = ({
   onApplyDamage
 }: CharacterCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isEnemy = character.type === 'enemy';
   const buffs = character.buffs || [];
@@ -64,6 +71,11 @@ export const CharacterCard = ({
   const hpPercent = getHpPercent(hp.current, hp.max);
   const hpStatus = getHpStatus(hp.current, stats.vit);
 
+  // 魔力一覧（味方のみ）
+  const magicPowerList = isAlly(character)
+    ? getMagicPowerList(skillLevels, stats, buffEffects)
+    : [];
+
   const updateResource = (resource: 'hp' | 'mp', delta: number) => {
     if (isMultiPartEnemy(character)) return;
 
@@ -76,7 +88,19 @@ export const CharacterCard = ({
     } as Character);
   };
 
+  // 削除処理（アニメーション付き）
+  const handleDelete = () => {
+    setIsDeleting(true);
+    setTimeout(() => {
+      onDelete(character.id);
+    }, 300);
+  };
 
+  // 削除確認をキャンセル
+  const cancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(false);
+  };
 
   // コンパクト表示
   if (!isExpanded) {
@@ -89,6 +113,7 @@ export const CharacterCard = ({
             : 'bg-gradient-to-br from-blue-950/80 to-stone-900/90 border border-blue-800/50'
           }
           shadow-lg active:opacity-80
+          ${isDeleting ? 'opacity-0 scale-95 transition-all duration-300' : 'transition-all duration-200'}
         `}
         onClick={() => setIsExpanded(true)}
       >
@@ -171,34 +196,23 @@ export const CharacterCard = ({
         : 'bg-gradient-to-br from-blue-950/80 to-stone-900/90 border border-blue-800/50'
       }
       shadow-lg
+      ${isDeleting ? 'opacity-0 scale-95 transition-all duration-300' : 'transition-all duration-200'}
     `}>
-      {/* 閉じるボタン */}
+      {/* 閉じるボタン（右上に単独配置） */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsExpanded(false);
+          setShowDeleteConfirm(false);
         }}
-        className="absolute top-2 right-10 w-8 h-8 flex items-center justify-center
+        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center
           text-stone-400 hover:text-stone-200 hover:bg-stone-700/50 rounded transition-colors text-sm"
       >
         ▲
       </button>
 
-      {/* 削除ボタン */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          onDelete(character.id);
-        }}
-        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center
-          text-stone-400 hover:text-red-400 hover:bg-red-950/50 rounded transition-colors text-xl z-10"
-      >
-        ×
-      </button>
-
       {/* ヘッダー */}
-      <div className="mb-3 pr-20">
+      <div className="mb-3 pr-12">
         <div className="flex items-center gap-2">
           <span className={`
             text-xs font-medium px-2 py-0.5 rounded
@@ -280,20 +294,20 @@ export const CharacterCard = ({
             />
           </div>
           <div className="flex gap-1">
-            {[-5, -1].map(n => (
+            {[-5, -3, -1].map(n => (
               <button
                 key={n}
                 onClick={() => updateResource('mp', n)}
-                className="flex-1 py-1 text-sm bg-violet-950/50 active:bg-violet-800/60 text-violet-300 rounded"
+                className="flex-1 py-1.5 text-sm bg-violet-950/50 active:bg-violet-800/60 text-violet-300 rounded"
               >
                 {n}
               </button>
             ))}
-            {[1, 5].map(n => (
+            {[1, 3, 5].map(n => (
               <button
                 key={n}
                 onClick={() => updateResource('mp', n)}
-                className="flex-1 py-1 text-sm bg-cyan-950/50 active:bg-cyan-800/60 text-cyan-300 rounded"
+                className="flex-1 py-1.5 text-sm bg-violet-950/50 active:bg-violet-800/60 text-violet-300 rounded"
               >
                 +{n}
               </button>
@@ -302,41 +316,103 @@ export const CharacterCard = ({
         </div>
       )}
 
-      {/* 味方用：戦闘ステータス */}
-      {!isEnemy && isAlly(character) && (
-        <div className="grid grid-cols-5 gap-2 mb-3 p-2 bg-stone-800/50 rounded text-center text-xs">
-          <div>
-            <div className="text-stone-500">命中</div>
-            <div className="text-stone-200 font-bold">{calcHitValue(character, buffEffects)}</div>
+      {/* 能力値（味方のみ） */}
+      {isAlly(character) && (
+        <div className="grid grid-cols-6 gap-1 mb-3 text-center">
+          {(['dex', 'agi', 'str', 'vit', 'int', 'mnd'] as const).map(key => {
+            const labels: Record<string, string> = {
+              dex: '器用', agi: '敏捷', str: '筋力', vit: '生命', int: '知力', mnd: '精神'
+            };
+            const baseValue = stats[key];
+            const buffBonus = buffEffects[key] || 0;
+            const totalValue = baseValue + buffBonus;
+            const bonus = Math.floor(totalValue / 6);
+            return (
+              <div key={key} className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">{labels[key]}</div>
+                <div className={`text-sm ${buffBonus > 0 ? 'text-green-400' : 'text-stone-300'}`}>
+                  {totalValue}
+                </div>
+                <div className="text-xs text-amber-400">B:{bonus}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 戦闘値（味方のみ） */}
+      {isAlly(character) && (
+        <div className="grid grid-cols-5 gap-1 mb-3 text-center">
+          <div className="bg-stone-800/50 rounded px-1 py-1">
+            <div className="text-xs text-stone-500">命中</div>
+            <div className="text-sm text-stone-200">
+              {calcHitValue(character, buffEffects)}
+            </div>
           </div>
-          <div>
-            <div className="text-stone-500">回避</div>
-            <div className="text-stone-200 font-bold">{calcDodgeValue(character, buffEffects)}</div>
+          <div className="bg-stone-800/50 rounded px-1 py-1">
+            <div className="text-xs text-stone-500">回避</div>
+            <div className="text-sm text-stone-200">
+              {calcDodgeValue(character, buffEffects)}
+            </div>
           </div>
-          <div>
-            <div className="text-stone-500">防護</div>
-            <div className="text-stone-200 font-bold">{calcDefenseValue(character, buffEffects)}</div>
+          <div className="bg-stone-800/50 rounded px-1 py-1">
+            <div className="text-xs text-stone-500">防護</div>
+            <div className="text-sm text-stone-200">
+              {calcDefenseValue(character, buffEffects)}
+            </div>
           </div>
-          <div>
-            <div className="text-stone-500">生抵</div>
-            <div className="text-stone-200 font-bold">{calcVitResist(character, buffEffects)}</div>
+          <div className="bg-stone-800/50 rounded px-1 py-1">
+            <div className="text-xs text-stone-500">生抵</div>
+            <div className="text-sm text-stone-200">
+              {calcVitResist(character, buffEffects)}
+            </div>
           </div>
-          <div>
-            <div className="text-stone-500">精抵</div>
-            <div className="text-stone-200 font-bold">{calcMndResist(character, buffEffects)}</div>
+          <div className="bg-stone-800/50 rounded px-1 py-1">
+            <div className="text-xs text-stone-500">精抵</div>
+            <div className="text-sm text-stone-200">
+              {calcMndResist(character, buffEffects)}
+            </div>
           </div>
         </div>
       )}
 
-      {/* バフ */}
+      {/* 魔力表示（味方で魔法技能がある場合のみ） */}
+      {isAlly(character) && magicPowerList.length > 0 && (
+        <div className="mb-3 p-2 bg-indigo-950/30 rounded border border-indigo-800/30">
+          <div className="text-xs text-indigo-400 mb-2">🔮 魔力</div>
+          <div className="grid grid-cols-2 gap-2">
+            {magicPowerList.map(magic => (
+              <div
+                key={magic.skillName}
+                className="bg-stone-800/50 rounded px-2 py-1 flex items-center justify-between"
+              >
+                <div>
+                  <div className="text-xs text-stone-400">{magic.magicName}</div>
+                  <div className="text-xs text-stone-500">Lv.{magic.level}</div>
+                </div>
+                <div className={`text-lg font-bold ${buffEffects.magicPower > 0 ? 'text-green-400' : 'text-indigo-300'}`}>
+                  {magic.magicPower}
+                </div>
+              </div>
+            ))}
+          </div>
+          {buffEffects.magicPower > 0 && (
+            <div className="text-xs text-green-400 mt-1">
+              ※魔力バフ +{buffEffects.magicPower} 適用中
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* バフ一覧 */}
       <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-stone-500">バフ/練技</span>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm text-stone-400">バフ/デバフ</span>
           <button
             onClick={() => onAddBuff(character)}
-            className="text-xs text-purple-400 active:text-purple-300"
+            className="text-xs text-amber-500 hover:text-amber-400"
           >
-            ＋追加
+            + 追加
           </button>
         </div>
         {buffs.length > 0 ? (
@@ -345,17 +421,17 @@ export const CharacterCard = ({
               <BuffBadge
                 key={buff.id}
                 buff={buff}
-                onRemove={(buffId) => onRemoveBuff(character.id, buffId)}
+                onRemove={() => onRemoveBuff(character.id, buff.id)}
               />
             ))}
           </div>
         ) : (
-          <div className="text-xs text-stone-600">バフなし</div>
+          <div className="text-xs text-stone-600">なし</div>
         )}
       </div>
 
       {/* 攻撃セクション（味方のみ） */}
-      {!isEnemy && isAlly(character) && onApplyDamage && (
+      {isAlly(character) && enemies.length > 0 && onApplyDamage && (
         <AttackSection
           character={character}
           enemies={enemies}
@@ -363,6 +439,47 @@ export const CharacterCard = ({
           onApplyDamage={onApplyDamage}
         />
       )}
+
+      {/* 削除ボタン（カード下部に配置） */}
+      <div className="mt-4 pt-3 border-t border-stone-700/50">
+        {!showDeleteConfirm ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(true);
+            }}
+            className="w-full py-2 text-sm text-stone-500 hover:text-red-400 
+              hover:bg-red-950/30 rounded transition-colors"
+          >
+            このキャラクターを削除
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-center text-red-400">
+              「{character.name}」を削除しますか？
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={cancelDelete}
+                className="flex-1 py-2 text-sm bg-stone-700 hover:bg-stone-600 
+                  text-stone-300 rounded transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="flex-1 py-2 text-sm bg-red-700 hover:bg-red-600 
+                  text-white rounded transition-colors font-medium"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
