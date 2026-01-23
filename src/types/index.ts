@@ -27,9 +27,9 @@ export interface Modifiers {
 }
 
 // バフ効果タイプ（magicPower追加）
-export type BuffType = 
-  | 'hit' | 'dodge' | 'defense' 
-  | 'vitResist' | 'mndResist' 
+export type BuffType =
+  | 'hit' | 'dodge' | 'defense'
+  | 'vitResist' | 'mndResist'
   | 'strBonus' | 'power' | 'magicPower'
   | 'magicDefense' | 'physicalReduce' | 'magicReduce'
   | 'dex' | 'agi' | 'str' | 'vit' | 'int' | 'mnd';
@@ -42,6 +42,7 @@ export interface Buff {
   remaining: number;
   buffType?: BuffType;
   buffValue?: number;
+  isKoho?: boolean;   // 🆕 鼓咆フラグ
 }
 
 // バフ効果の集計結果（magicPower追加）
@@ -74,7 +75,18 @@ export interface Part {
   hit: number;
   dodge: number;
   defense: number;
+  buffs?: Buff[];  // 🆕 追加
 }
+
+// 一括バフ付与の対象（キャラまたは部位）
+export interface BulkBuffTarget {
+  characterId: string;
+  characterName: string;
+  partId?: string;      // 複数部位敵の場合
+  partName?: string;    // 部位名
+  isEnemy: boolean;
+}
+
 
 // 基本キャラクター
 interface BaseCharacter {
@@ -262,6 +274,7 @@ export interface Room {
 
 // 期限切れバフ通知
 export interface ExpiredBuffNotification {
-  charName: string;
+  id: string;
+  characterName: string;
   buffName: string;
 }

@@ -15,7 +15,7 @@ interface MultiPartEnemyCardProps {
   onUpdate: (character: MultiPartEnemy) => void;
   onDelete: (id: string) => void;
   onAddBuff: (character: MultiPartEnemy) => void;
-  onRemoveBuff: (charId: string, buffId: string) => void;
+  onRemoveBuff: (charId: string, buffId: string, partId?: string) => void;
 }
 
 export const MultiPartEnemyCard = ({
@@ -127,11 +127,20 @@ export const MultiPartEnemyCard = ({
         {/* バフ表示 */}
         {buffs.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {buffs.map(buff => (
-              <span key={buff.id} className="text-xs bg-purple-900/40 text-purple-300 px-1.5 py-0.5 rounded">
-                {buff.name} {buff.remaining}R
-              </span>
-            ))}
+            {buffs.map(buff => {
+              const isKoho = buff.isKoho === true;
+              const isPermanent = buff.remaining === -1;
+              return (
+                <span
+                  key={buff.id}
+                  className={`text-xs px-1.5 py-0.5 rounded ${isKoho ? 'bg-amber-900/40 text-amber-300' : 'bg-purple-900/40 text-purple-300'
+                    }`}
+                >
+                  {isKoho && '🎺 '}
+                  {buff.name} {isPermanent ? '∞' : `${buff.remaining}R`}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
@@ -180,7 +189,7 @@ export const MultiPartEnemyCard = ({
           return (
             <div key={part.id} className="bg-stone-800/30 rounded-lg p-3">
               {/* 部位名 */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className={`font-medium ${status ? status.color : 'text-stone-200'}`}>
                   {part.name}
                 </span>
@@ -188,6 +197,18 @@ export const MultiPartEnemyCard = ({
                   <span className={`text-xs px-1.5 py-0.5 rounded bg-stone-800 ${status.color}`}>
                     {status.label}
                   </span>
+                )}
+                {/* 部位バフ表示 */}
+                {(part.buffs || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1 ml-2">
+                    {(part.buffs || []).map(buff => (
+                      <BuffBadge
+                        key={buff.id}
+                        buff={buff}
+                        onRemove={() => onRemoveBuff(character.id, buff.id, part.id)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
 

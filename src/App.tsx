@@ -7,7 +7,9 @@ import { useState, useEffect } from 'react';
 import type {
   Character,
   PartyBuff,
-  ExpiredBuffNotification
+  ExpiredBuffNotification,
+  BulkBuffTarget,
+  Buff
 } from './types';
 import type { Room } from './types/room';
 import { isMultiPartEnemy } from './types';
@@ -17,20 +19,22 @@ import {
   AddBuffModal,
   CharacterEditModal,
   KohoModal,
-  TemplateSelectModal
+  TemplateSelectModal,
+  BulkBuffModal
 } from './components/modals';
 import { RoomEntry, RoomHeader } from './components/room';
 import { RoomProvider, useRoom } from './contexts/RoomContext';
+import { addBuffWithKohoReplace, processBuffsOnRoundEnd } from './utils/buff';
 
 // ============================================
 // 戦闘画面（既存のメイン部分）
 // ============================================
 function BattleScreen() {
-  const { 
-    room, 
-    isGM, 
+  const {
+    room,
+    isGM,
     characters,
-    nextRound, 
+    nextRound,
     updatePartyBuff,
     addCharacter,
     updateCharacter,
@@ -48,6 +52,7 @@ function BattleScreen() {
   // 削除: const [partyBuff, setPartyBuff] = useState<PartyBuff | null>(null);
   const [showKohoModal, setShowKohoModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showBulkBuffModal, setShowBulkBuffModal] = useState(false);
   const [prevRound, setPrevRound] = useState(room?.currentRound ?? 1);
 
   // ルームのラウンド（Firestoreから同期）
@@ -73,20 +78,21 @@ function BattleScreen() {
 
       // 全キャラのバフを減少させる
       characters.forEach(async (char) => {
-        const newBuffs = (char.buffs || []).map(buff => ({
-          ...buff,
-          remaining: buff.remaining - 1
-        })).filter(buff => {
-          if (buff.remaining <= 0) {
-            newExpired.push({ charName: char.name, buffName: buff.name });
-            return false;
-          }
-          return true;
-        });
+        const { remainingBuffs, expiredBuffs } = processBuffsOnRoundEnd(char.buffs || []);
+
+        if (expiredBuffs.length > 0) {
+          expiredBuffs.forEach(buff => {
+            newExpired.push({
+              id: `expired-${char.id}-${buff.name}-${Date.now()}`,
+              characterName: char.name,
+              buffName: buff.name
+            });
+          });
+        }
 
         // バフが変更されたら更新
-        if (JSON.stringify(newBuffs) !== JSON.stringify(char.buffs)) {
-          await updateCharacter({ ...char, buffs: newBuffs });
+        if (JSON.stringify(remainingBuffs) !== JSON.stringify(char.buffs)) {
+          await updateCharacter({ ...char, buffs: remainingBuffs });
         }
       });
 
@@ -120,8 +126,64 @@ function BattleScreen() {
     await addBuff(charId, buff);
   };
 
-  const handleRemoveBuff = async (charId: string, buffId: string) => {
-    await removeBuff(charId, buffId);
+  const handleRemoveBuff = async (charId: string, buffId: string, partId?: string) => {
+    await removeBuff(charId, buffId, partId);
+  };
+
+  // 一括バフ適用
+  const handleBulkBuffApply = async (targets: BulkBuffTarget[], buff: Buff) => {
+    for (const target of targets) {
+      const char = characters.find(c => c.id === target.characterId);
+      if (!char) continue;
+
+      if (target.partId && isMultiPartEnemy(char)) {
+        // 複数部位敵の部位にバフ付与
+        const updatedParts = char.parts.map(part => {
+          if (part.id === target.partId) {
+            const newBuffs = addBuffWithKohoReplace(part.buffs || [], {
+              ...buff,
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            });
+            return { ...part, buffs: newBuffs };
+          }
+          return part;
+        });
+        await updateCharacter({ ...char, parts: updatedParts });
+      } else {
+        // 通常キャラにバフ付与
+        const newBuffs = addBuffWithKohoReplace(char.buffs || [], {
+          ...buff,
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        });
+        await updateCharacter({ ...char, buffs: newBuffs });
+      }
+    }
+    setShowBulkBuffModal(false);
+  };
+
+  // 鼓咆一括解除
+  const handleBulkRemoveKoho = async (targets: BulkBuffTarget[]) => {
+    for (const target of targets) {
+      const char = characters.find(c => c.id === target.characterId);
+      if (!char) continue;
+
+      if (target.partId && isMultiPartEnemy(char)) {
+        // 複数部位敵の部位から鼓咆を削除
+        const updatedParts = char.parts.map(part => {
+          if (part.id === target.partId) {
+            const newBuffs = (part.buffs || []).filter(b => !b.isKoho);
+            return { ...part, buffs: newBuffs };
+          }
+          return part;
+        });
+        await updateCharacter({ ...char, parts: updatedParts });
+      } else {
+        // 通常キャラから鼓咆を削除
+        const newBuffs = (char.buffs || []).filter(b => !b.isKoho);
+        await updateCharacter({ ...char, buffs: newBuffs });
+      }
+    }
+    setShowBulkBuffModal(false);
   };
 
   // ============================================
@@ -140,9 +202,9 @@ function BattleScreen() {
       });
       await updateCharacter({ ...char, parts: newParts });
     } else if ('hp' in char) {
-      await updateCharacter({ 
-        ...char, 
-        hp: { ...char.hp, current: char.hp.current - damage } 
+      await updateCharacter({
+        ...char,
+        hp: { ...char.hp, current: char.hp.current - damage }
       });
     }
   };
@@ -176,7 +238,7 @@ function BattleScreen() {
           <div className="text-sm font-medium mb-1">バフが切れました</div>
           {expiredBuffs.map((e, i) => (
             <div key={i} className="text-xs text-amber-200">
-              {e.charName}: {e.buffName}
+              {e.characterName}: {e.buffName}
             </div>
           ))}
         </div>
@@ -203,6 +265,18 @@ function BattleScreen() {
               </button>
             )}
           </div>
+
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <button
+              onClick={() => setShowBulkBuffModal(true)}
+              className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 
+                text-white text-sm rounded transition-colors flex items-center gap-1"
+            >
+              <span>✨</span>
+              <span className="hidden sm:inline">一括バフ</span>
+            </button>
+          </div>
+
           <p className="text-center text-xs text-stone-600 mt-1">
             {isGM ? 'GMのみラウンドを進行できます' : 'GMがラウンドを進行します'}
           </p>
@@ -374,6 +448,15 @@ function BattleScreen() {
         />
       )}
 
+      {showBulkBuffModal && (
+        <BulkBuffModal
+          characters={characters}
+          onApply={handleBulkBuffApply}
+          onRemoveKoho={handleBulkRemoveKoho}
+          onClose={() => setShowBulkBuffModal(false)}
+        />
+      )}
+
       <footer className="text-center py-4 text-stone-600 text-sm">
         ルームID: {room?.id} | リアルタイム同期中 🔄
       </footer>
@@ -404,8 +487,8 @@ export default function App() {
 
   // ルーム参加中 → 戦闘画面表示
   return (
-    <RoomProvider 
-      roomId={currentRoom.id} 
+    <RoomProvider
+      roomId={currentRoom.id}
       onExit={handleExitRoom}
     >
       <BattleScreen />

@@ -176,11 +176,20 @@ export const CharacterCard = ({
         {/* バフ表示 */}
         {buffs.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {buffs.map(buff => (
-              <span key={buff.id} className="text-xs bg-purple-900/40 text-purple-300 px-1.5 py-0.5 rounded">
-                {buff.name} {buff.remaining}R
-              </span>
-            ))}
+            {buffs.map(buff => {
+              const isKoho = buff.isKoho === true;
+              const isPermanent = buff.remaining === -1;
+              return (
+                <span
+                  key={buff.id}
+                  className={`text-xs px-1.5 py-0.5 rounded ${isKoho ? 'bg-amber-900/40 text-amber-300' : 'bg-purple-900/40 text-purple-300'
+                    }`}
+                >
+                  {isKoho && '🎺 '}
+                  {buff.name} {isPermanent ? '∞' : `${buff.remaining}R`}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>

@@ -2,12 +2,12 @@
 // ルームコンテキスト（状態管理）
 // ============================================
 
-import React, { 
-  createContext, 
-  useContext, 
-  useEffect, 
-  useState, 
-  useCallback 
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback
 } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -23,6 +23,7 @@ import {
 } from '../lib/firestore';
 import type { Room, RoomMember, RoomState } from '../types/room';
 import type { Character, PartyBuff, Buff } from '../types';
+import { isMultiPartEnemy } from '../types';
 
 // ============================================
 // コンテキスト定義
@@ -39,7 +40,7 @@ interface RoomContextValue extends RoomState {
   deleteCharacter: (characterId: string) => Promise<void>;
   // バフ操作
   addBuff: (charId: string, buff: Buff) => Promise<void>;
-  removeBuff: (charId: string, buffId: string) => Promise<void>;
+  removeBuff: (charId: string, buffId: string, partId?: string) => Promise<void>;
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null);
@@ -60,7 +61,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   onExit,
 }) => {
   const { user } = useAuth();
-  
+
   const [room, setRoom] = useState<Room | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -108,7 +109,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // ルーム退出
   const exitRoom = useCallback(async () => {
     if (!user || !roomId) return;
-    
+
     try {
       await leaveRoom(roomId, user.uid);
       onExit();
@@ -120,7 +121,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // ラウンド進行
   const nextRound = useCallback(async () => {
     if (!roomId) return;
-    
+
     try {
       await advanceRound(roomId);
     } catch (err) {
@@ -131,7 +132,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // 鼓咆更新
   const updatePartyBuff = useCallback(async (buff: PartyBuff | null) => {
     if (!roomId) return;
-    
+
     try {
       await setPartyBuff(roomId, buff);
     } catch (err) {
@@ -146,7 +147,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // キャラクター追加
   const addCharacter = useCallback(async (character: Character) => {
     if (!roomId || !user) return;
-    
+
     try {
       // 味方キャラはユーザーがオーナー、敵はnull（GMが管理）
       const ownerId = character.type === 'ally' ? user.uid : null;
@@ -159,7 +160,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // キャラクター更新
   const updateCharacter = useCallback(async (character: Character) => {
     if (!roomId) return;
-    
+
     try {
       await updateCharacterToFirestore(roomId, character);
     } catch (err) {
@@ -170,7 +171,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // キャラクター削除
   const deleteCharacter = useCallback(async (characterId: string) => {
     if (!roomId) return;
-    
+
     try {
       await deleteCharacterFromFirestore(roomId, characterId);
     } catch (err) {
@@ -185,7 +186,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
   // バフ追加
   const addBuff = useCallback(async (charId: string, buff: Buff) => {
     if (!roomId) return;
-    
+
     const character = characters.find(c => c.id === charId);
     if (!character) return;
 
@@ -201,17 +202,31 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
     }
   }, [roomId, characters]);
 
-  // バフ削除
-  const removeBuff = useCallback(async (charId: string, buffId: string) => {
+  // バフ削除（部位対応）
+  const removeBuff = useCallback(async (charId: string, buffId: string, partId?: string) => {
     if (!roomId) return;
-    
+
     const character = characters.find(c => c.id === charId);
     if (!character) return;
 
-    const updatedCharacter = {
-      ...character,
-      buffs: (character.buffs || []).filter(b => b.id !== buffId),
-    };
+    let updatedCharacter = { ...character };
+
+    if (partId && isMultiPartEnemy(character)) {
+      // 部位バフ削除
+      const updatedParts = character.parts.map(part => {
+        if (part.id === partId) {
+          return {
+            ...part,
+            buffs: (part.buffs || []).filter(b => b.id !== buffId),
+          };
+        }
+        return part;
+      });
+      updatedCharacter = { ...updatedCharacter, parts: updatedParts };
+    } else {
+      // 本体バフ削除
+      updatedCharacter.buffs = (character.buffs || []).filter(b => b.id !== buffId);
+    }
 
     try {
       await updateCharacterToFirestore(roomId, updatedCharacter);
