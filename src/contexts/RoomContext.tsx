@@ -222,7 +222,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
         }
         return part;
       });
-      updatedCharacter = { ...updatedCharacter, parts: updatedParts };
+      updatedCharacter = { ...character, parts: updatedParts };
     } else {
       // 本体バフ削除
       updatedCharacter.buffs = (character.buffs || []).filter(b => b.id !== buffId);

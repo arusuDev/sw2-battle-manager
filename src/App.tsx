@@ -209,6 +209,11 @@ function BattleScreen() {
     }
   };
 
+  // 敵からの攻撃ダメージ適用（味方は部位がないのでpartId不要）
+  const handleEnemyAttackDamage = async (targetId: string, damage: number) => {
+    await applyDamageToTarget(targetId, '', damage);
+  };
+
   // ============================================
   // 鼓咆の更新（Firestore連携のみ）
   // ============================================
@@ -383,6 +388,8 @@ function BattleScreen() {
                         onDelete={handleDeleteCharacter}
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
+                        allies={allies}
+                        onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     ) : (
                       <CharacterCard
@@ -390,8 +397,11 @@ function BattleScreen() {
                         character={char}
                         onUpdate={handleUpdateCharacter}
                         onDelete={handleDeleteCharacter}
+                        onEditStats={setEditingChar}
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
+                        allies={allies}
+                        onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     )
                   ))}

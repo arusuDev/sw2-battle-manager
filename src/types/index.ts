@@ -66,6 +66,19 @@ export interface BuffEffects {
   mnd: number;
 }
 
+// 敵の魔法スキル
+export interface EnemyMagicSkill {
+  skill: string;      // "ソーサラー", "プリースト" など
+  level: number;      // レベル
+  magicPower: number; // 魔力（達成値）
+}
+
+// 弱点データ
+export interface Weakness {
+  type: string;   // "物理", "炎", "氷" など（表示用）
+  value: number;  // ダメージ加算値
+}
+
 // 複数部位の敵の部位
 export interface Part {
   id: string;
@@ -75,7 +88,12 @@ export interface Part {
   hit: number;
   dodge: number;
   defense: number;
-  buffs?: Buff[];  // 🆕 追加
+  buffs?: Buff[];
+
+  // 🆕 攻撃関連
+  attackName?: string;       // "槍", "角"（任意）
+  fixedDamage?: number;      // 物理の固定ダメージ (2d+X の X)
+  magicSkills?: EnemyMagicSkill[];  // 魔法スキル（部位ごと）
 }
 
 // 一括バフ付与の対象（キャラまたは部位）
@@ -111,12 +129,19 @@ export interface SingleEnemy extends BaseCharacter {
   hp: ResourcePool;
   mp: ResourcePool;
   modifiers: Modifiers;
+
+  // 🆕 攻撃関連
+  fixedDamage?: number;              // 物理の固定ダメージ
+  attackName?: string;               // 攻撃方法名（任意）
+  magicSkills?: EnemyMagicSkill[];   // 魔法スキル
+  weakness?: Weakness;               // 弱点
 }
 
 // 複数部位の敵
 export interface MultiPartEnemy extends BaseCharacter {
   type: 'enemy';
   parts: Part[];
+  weakness?: Weakness;  // 🆕 弱点（敵全体で共通）
 }
 
 // キャラクターの統合型
@@ -175,6 +200,8 @@ export interface AttackCalcState {
   critValue: number;
   rolls: { d1: string; d2: string }[];
   isResisted: boolean;
+  isWeaknessHit: boolean;
+  isWeaknessExploit: boolean;  // 🆕 弱点看破（ダメージx2）
   finalDamage: number | null;
 }
 

@@ -314,6 +314,7 @@ export const subscribeToCharacters = (
 
   return onSnapshot(charsRef, (snap) => {
     const characters = snap.docs.map((doc) => ({
+      id: doc.id,
       ...doc.data(),
     })) as Character[];
     callback(characters);

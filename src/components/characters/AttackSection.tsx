@@ -41,6 +41,8 @@ export const AttackSection = ({
         critValue: 10,
         rolls: [{ d1: '', d2: '' }],
         isResisted: false,
+        isWeaknessHit: false,
+        isWeaknessExploit: false, // 弱点看破
         finalDamage: null,
     });
 
@@ -62,21 +64,32 @@ export const AttackSection = ({
         }
     };
 
+    // 選択中の対象
+    const selectedTarget = enemies.find(e => e.id === attackCalc.targetId);
+
+    // 弱点情報取得
+    const getWeakness = () => {
+        if (!selectedTarget) return null;
+        if (isSingleEnemy(selectedTarget) || isMultiPartEnemy(selectedTarget)) {
+            return selectedTarget.weakness;
+        }
+        return null;
+    };
+    const weakness = getWeakness();
+
     // 対象の防御値取得
     const getTargetDefense = (): number => {
-        if (!attackCalc.targetId) return 0;
-        const target = enemies.find(e => e.id === attackCalc.targetId);
-        if (!target) return 0;
+        if (!selectedTarget) return 0;
 
-        const targetBuffEffects = calcBuffEffects(target.buffs);
+        const targetBuffEffects = calcBuffEffects(selectedTarget.buffs);
 
         if (attackCalc.attackType === 'physical') {
             let defense = 0;
-            if (isMultiPartEnemy(target) && attackCalc.targetPartId) {
-                const part = target.parts.find(p => p.id === attackCalc.targetPartId);
+            if (isMultiPartEnemy(selectedTarget) && attackCalc.targetPartId) {
+                const part = selectedTarget.parts.find(p => p.id === attackCalc.targetPartId);
                 defense = part?.defense || 0;
-            } else if (isSingleEnemy(target)) {
-                defense = target.modifiers?.defense || 0;
+            } else if (isSingleEnemy(selectedTarget)) {
+                defense = selectedTarget.modifiers?.defense || 0;
             }
             return defense + (targetBuffEffects.physicalReduce || 0);
         } else {
@@ -166,9 +179,6 @@ export const AttackSection = ({
         ? COMBAT_SKILLS.filter(s => skillLevels[s] > 0)
         : MAGIC_SKILLS.filter(s => skillLevels[s] > 0);
 
-    // 選択中の対象
-    const selectedTarget = enemies.find(e => e.id === attackCalc.targetId);
-
     // ダメージ計算結果
     const damageResult = calculateDamage();
 
@@ -183,11 +193,13 @@ export const AttackSection = ({
                         ...prev,
                         attackType: 'physical',
                         selectedSkill: '',
-                        rolls: [{ d1: '', d2: '' }]
+                        rolls: [{ d1: '', d2: '' }],
+                        isWeaknessHit: false,
+                        isWeaknessExploit: false
                     }))}
                     className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${attackCalc.attackType === 'physical'
-                            ? 'bg-orange-700 text-white'
-                            : 'bg-stone-800 text-stone-400'
+                        ? 'bg-orange-700 text-white'
+                        : 'bg-stone-800 text-stone-400'
                         }`}
                 >
                     物理
@@ -197,11 +209,13 @@ export const AttackSection = ({
                         ...prev,
                         attackType: 'magic',
                         selectedSkill: '',
-                        rolls: [{ d1: '', d2: '' }]
+                        rolls: [{ d1: '', d2: '' }],
+                        isWeaknessHit: false,
+                        isWeaknessExploit: false
                     }))}
                     className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${attackCalc.attackType === 'magic'
-                            ? 'bg-indigo-700 text-white'
-                            : 'bg-stone-800 text-stone-400'
+                        ? 'bg-indigo-700 text-white'
+                        : 'bg-stone-800 text-stone-400'
                         }`}
                 >
                     魔法
@@ -232,7 +246,7 @@ export const AttackSection = ({
                 <label className="block text-xs text-stone-500 mb-1">攻撃対象</label>
                 <select
                     value={attackCalc.targetId}
-                    onChange={(e) => setAttackCalc(prev => ({ ...prev, targetId: e.target.value, targetPartId: '' }))}
+                    onChange={(e) => setAttackCalc(prev => ({ ...prev, targetId: e.target.value, targetPartId: '', isWeaknessHit: false, isWeaknessExploit: false }))}
                     className="w-full px-2 py-2 bg-stone-800 border border-stone-700 rounded text-stone-200 text-sm"
                 >
                     <option value="">-- 対象選択 --</option>
@@ -297,17 +311,54 @@ export const AttackSection = ({
                 </div>
             </div>
 
-            {/* 追加ダメージ表示 */}
+            {/* 追加ダメージ表示 & 弱点表示 */}
             {attackCalc.selectedSkill && (
                 <div className="mt-2 p-2 bg-stone-800/50 rounded text-xs text-stone-400">
-                    追加ダメージ: <span className="text-stone-200 font-bold">{calcExtraDamage()}</span>
-                    {attackCalc.attackType === 'physical'
-                        ? ` (技能${skillLevels[attackCalc.selectedSkill]}+筋力B)`
-                        : ` (魔力)`
-                    }
-                    {getKohoBonus() > 0 && (
-                        <span className="text-orange-400"> +鼓咆{getKohoBonus()}</span>
-                    )}
+                    <div>
+                        追加ダメージ: <span className="text-stone-200 font-bold">{calcExtraDamage()}</span>
+                        {attackCalc.attackType === 'physical'
+                            ? ` (技能${skillLevels[attackCalc.selectedSkill]}+筋力B)`
+                            : ` (魔力)`
+                        }
+                        {getKohoBonus() > 0 && (
+                            <span className="text-orange-400"> +鼓咆{getKohoBonus()}</span>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 弱点適用 */}
+            {weakness && (
+                <div className="mt-2 text-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-red-400">弱点情報:</span>
+                        <span className="text-stone-200">{weakness.type} +{weakness.value}</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer bg-red-900/20 p-2 rounded border border-red-900/30 hover:bg-red-900/30 transition-colors flex-1">
+                            <input
+                                type="checkbox"
+                                checked={attackCalc.isWeaknessHit}
+                                onChange={(e) => setAttackCalc(prev => ({ ...prev, isWeaknessHit: e.target.checked }))}
+                                className="w-4 h-4 rounded bg-stone-700 border-stone-600 focus:ring-red-500 text-red-500"
+                            />
+                            <span className={attackCalc.isWeaknessHit ? 'text-red-200 font-bold' : 'text-stone-400'}>
+                                弱点適用 (+{weakness.value})
+                            </span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer bg-indigo-900/20 p-2 rounded border border-indigo-900/30 hover:bg-indigo-900/30 transition-colors flex-1">
+                            <input
+                                type="checkbox"
+                                checked={attackCalc.isWeaknessExploit}
+                                onChange={(e) => setAttackCalc(prev => ({ ...prev, isWeaknessExploit: e.target.checked }))}
+                                className="w-4 h-4 rounded bg-stone-700 border-stone-600 focus:ring-indigo-500 text-indigo-500"
+                            />
+                            <span className={attackCalc.isWeaknessExploit ? 'text-indigo-200 font-bold' : 'text-stone-400'}>
+                                弱点看破 (×2)
+                            </span>
+                        </label>
+                    </div>
                 </div>
             )}
 
@@ -394,7 +445,11 @@ export const AttackSection = ({
                 const extraDamage = calcExtraDamage();
                 const defense = getTargetDefense();
                 const kohoBonus = getKohoBonus();
-                let finalDamage = damageResult.powerDamage + extraDamage - defense + kohoBonus;
+                const weaknessVal = (weakness && attackCalc.isWeaknessHit) ? weakness.value : 0;
+                // 弱点看破：弱点値を2倍にする
+                const weaknessBonus = attackCalc.isWeaknessExploit ? weaknessVal * 2 : weaknessVal;
+
+                let finalDamage = damageResult.powerDamage + extraDamage - defense + kohoBonus + weaknessBonus;
                 finalDamage = Math.max(0, finalDamage);
 
                 // 抵抗時半減（切り上げ）
@@ -416,6 +471,7 @@ export const AttackSection = ({
                         <div className="text-xs text-stone-500 text-center mt-1">
                             威力{damageResult.powerDamage} + 追加{extraDamage} - 防御{defense}
                             {kohoBonus > 0 && ` + 鼓咆${kohoBonus}`}
+                            {weaknessBonus > 0 && ` + 弱点${weaknessBonus}${attackCalc.isWeaknessExploit ? '(看破)' : ''}`}
                         </div>
 
                         {/* 適用ボタン */}
@@ -423,11 +479,11 @@ export const AttackSection = ({
                             <button
                                 onClick={() => {
                                     onApplyDamage(attackCalc.targetId, attackCalc.targetPartId, finalDamage);
-                                    setAttackCalc(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false }));
+                                    setAttackCalc(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false, isWeaknessHit: false, isWeaknessExploit: false }));
                                 }}
                                 className={`w-full mt-2 py-2 font-bold rounded transition-colors ${attackCalc.attackType === 'physical'
-                                        ? 'bg-orange-700 hover:bg-orange-600 text-white'
-                                        : 'bg-indigo-700 hover:bg-indigo-600 text-white'
+                                    ? 'bg-orange-700 hover:bg-orange-600 text-white'
+                                    : 'bg-indigo-700 hover:bg-indigo-600 text-white'
                                     }`}
                             >
                                 ダメージを適用
@@ -440,7 +496,7 @@ export const AttackSection = ({
             {/* リセット＆自動ロールボタン */}
             <div className="flex gap-2 mt-2">
                 <button
-                    onClick={() => setAttackCalc(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false }))}
+                    onClick={() => setAttackCalc(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false, isWeaknessHit: false, isWeaknessExploit: false }))}
                     className="flex-1 py-1 bg-stone-700 hover:bg-stone-600 text-stone-300 text-sm rounded transition-colors"
                 >
                     クリア

@@ -3,13 +3,14 @@
 // ============================================
 
 import { useState } from 'react';
-import type { Character, Stats } from '../../types';
-import { SKILL_CATEGORIES } from '../../data/skills';
+import type { Character, Stats, EnemyMagicSkill, Weakness } from '../../types';
+import { SKILL_CATEGORIES, MAGIC_SKILLS } from '../../data/skills';
 
 interface AddCharacterFormProps {
-  onAdd: (character: Character) => void;
+  onAdd: (character: Character) => Promise<void>;
 }
 
+// 部位入力用インターフェース
 interface PartInput {
   name: string;
   hp: string;
@@ -17,17 +18,99 @@ interface PartInput {
   hit: string;
   dodge: string;
   defense: string;
+  // 🆕 追加
+  attackName: string;
+  fixedDamage: string;
+  magicSkills: EnemyMagicSkill[];
 }
+
+// 魔法スキル入力コンポーネント
+const MagicSkillsInput = ({
+  skills,
+  onChange
+}: {
+  skills: EnemyMagicSkill[];
+  onChange: (skills: EnemyMagicSkill[]) => void;
+}) => {
+  const addSkill = () => {
+    onChange([...skills, { skill: 'ソーサラー', level: 1, magicPower: 0 }]);
+  };
+
+  const removeSkill = (index: number) => {
+    onChange(skills.filter((_, i) => i !== index));
+  };
+
+  const updateSkill = (index: number, key: keyof EnemyMagicSkill, value: string | number) => {
+    onChange(skills.map((s, i) => i === index ? { ...s, [key]: value } : s));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs text-stone-500">魔法技能</div>
+      {skills.map((skill, index) => (
+        <div key={index} className="flex flex-wrap gap-2 items-end bg-stone-800 p-2 rounded border border-stone-700">
+          <div className="flex-1 min-w-[120px]">
+            <label className="block text-[10px] text-stone-500">技能</label>
+            <select
+              value={skill.skill}
+              onChange={(e) => updateSkill(index, 'skill', e.target.value)}
+              className="w-full px-1 py-1 bg-stone-700 border border-stone-600 rounded text-xs text-stone-200"
+            >
+              {MAGIC_SKILLS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-16">
+            <label className="block text-[10px] text-stone-500">Lv</label>
+            <input
+              type="number"
+              value={skill.level}
+              onChange={(e) => updateSkill(index, 'level', parseInt(e.target.value) || 0)}
+              className="w-full px-1 py-1 bg-stone-700 border border-stone-600 rounded text-xs text-stone-200 text-center"
+            />
+          </div>
+          <div className="w-16">
+            <label className="block text-[10px] text-stone-500">魔力</label>
+            <input
+              type="number"
+              value={skill.magicPower}
+              onChange={(e) => updateSkill(index, 'magicPower', parseInt(e.target.value) || 0)}
+              className="w-full px-1 py-1 bg-stone-700 border border-stone-600 rounded text-xs text-stone-200 text-center"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => removeSkill(index)}
+            className="text-stone-500 hover:text-red-400 px-1 py-1"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addSkill}
+        className="text-xs text-indigo-400 hover:text-indigo-300 border border-dashed border-indigo-900 px-2 py-1 rounded w-full"
+      >
+        + 魔法技能を追加
+      </button>
+    </div>
+  );
+};
 
 export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'ally' | 'enemy'>('ally');
   const [hp, setHp] = useState('30');
   const [mp, setMp] = useState('20');
   const [hasMultipleParts, setHasMultipleParts] = useState(false);
+
+  // 複数部位データ
   const [parts, setParts] = useState<PartInput[]>([
-    { name: '部位1', hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0' }
+    { name: '部位1', hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0', attackName: '', fixedDamage: '0', magicSkills: [] }
   ]);
 
   // 味方用ステータス
@@ -37,11 +120,19 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
   const [dodgeMod, setDodgeMod] = useState('0');
   const [defense, setDefense] = useState('0');
 
+  // 敵用追加ステータス（単体）
+  const [enemyAttackName, setEnemyAttackName] = useState('');
+  const [enemyFixedDamage, setEnemyFixedDamage] = useState('0');
+  const [enemyMagicSkills, setEnemyMagicSkills] = useState<EnemyMagicSkill[]>([]);
+  const [enemyWeaknessType, setEnemyWeaknessType] = useState('');
+  const [enemyWeaknessValue, setEnemyWeaknessValue] = useState('0');
+
   const addPart = () => {
     if (parts.length >= 10) return;
     setParts(prev => [...prev, {
       name: `部位${prev.length + 1}`,
-      hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0'
+      hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0',
+      attackName: '', fixedDamage: '0', magicSkills: []
     }]);
   };
 
@@ -50,73 +141,116 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
     setParts(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updatePart = (index: number, key: keyof PartInput, value: string) => {
+  const updatePart = (index: number, key: keyof PartInput, value: any) => {
     setParts(prev => prev.map((p, i) => i === index ? { ...p, [key]: value } : p));
   };
 
-  const handleSubmit = () => {
-    if (!name.trim()) return;
+  const handleSubmit = async () => {
+    if (!name.trim() || isSubmitting) return;
 
-    if (type === 'ally') {
-      // 味方キャラクター
-      const hpMax = parseInt(hp) || 30;
-      const mpMax = parseInt(mp) || 20;
+    setIsSubmitting(true);
+    try {
+      if (type === 'ally') {
+        // 味方キャラクター
+        const hpMax = parseInt(hp) || 30;
+        const mpMax = parseInt(mp) || 20;
 
-      onAdd({
-        id: Date.now().toString(),
-        name: name.trim(),
-        type: 'ally',
-        hp: { current: hpMax, max: hpMax },
-        mp: { current: mpMax, max: mpMax },
-        stats: { ...stats },
-        skillLevels: { ...skillLevels },
-        modifiers: {
-          hitMod: parseInt(hitMod) || 0,
-          dodgeMod: parseInt(dodgeMod) || 0,
-          defense: parseInt(defense) || 0
-        },
-        buffs: [],
-      });
-    } else if (hasMultipleParts) {
-      // 複数部位の敵
-      const partsData = parts.map(p => ({
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: p.name.trim() || '部位',
-        hp: { current: parseInt(p.hp) || 30, max: parseInt(p.hp) || 30 },
-        mp: { current: parseInt(p.mp) || 0, max: parseInt(p.mp) || 0 },
-        hit: parseInt(p.hit) || 0,
-        dodge: parseInt(p.dodge) || 0,
-        defense: parseInt(p.defense) || 0,
-      }));
+        await onAdd({
+          id: Date.now().toString(),
+          name: name.trim(),
+          type: 'ally',
+          hp: { current: hpMax, max: hpMax },
+          mp: { current: mpMax, max: mpMax },
+          stats: { ...stats },
+          skillLevels: { ...skillLevels },
+          modifiers: {
+            hitMod: parseInt(hitMod) || 0,
+            dodgeMod: parseInt(dodgeMod) || 0,
+            defense: parseInt(defense) || 0
+          },
+          buffs: [],
+        });
+      } else {
+        // 敵キャラクター（単体 or 複数部位）
+        const weakness: Weakness | undefined = enemyWeaknessType.trim()
+          ? { type: enemyWeaknessType.trim(), value: parseInt(enemyWeaknessValue) || 0 }
+          : undefined;
 
-      onAdd({
-        id: Date.now().toString(),
-        name: name.trim(),
-        type: 'enemy',
-        parts: partsData,
-        buffs: [],
-      });
-    } else {
-      // 単体の敵
-      const hpMax = parseInt(hp) || 30;
-      const mpMax = parseInt(mp) || 0;
 
-      onAdd({
-        id: Date.now().toString(),
-        name: name.trim(),
-        type: 'enemy',
-        hp: { current: hpMax, max: hpMax },
-        mp: { current: mpMax, max: mpMax },
-        modifiers: {
-          hitMod: parseInt(hitMod) || 0,
-          dodgeMod: parseInt(dodgeMod) || 0,
-          defense: parseInt(defense) || 0
-        },
-        buffs: [],
-      });
+
+        if (hasMultipleParts) {
+          // 複数部位の敵
+          const partsData = parts.map(p => {
+            const partBase = {
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: p.name.trim() || '部位',
+              hp: { current: parseInt(p.hp) || 30, max: parseInt(p.hp) || 30 },
+              mp: { current: parseInt(p.mp) || 0, max: parseInt(p.mp) || 0 },
+              hit: parseInt(p.hit) || 0,
+              dodge: parseInt(p.dodge) || 0,
+              defense: parseInt(p.defense) || 0,
+              fixedDamage: parseInt(p.fixedDamage) || 0,
+            };
+
+            // undefinedを含まないように条件付きで追加
+            const additionalProps: any = {};
+            if (p.attackName.trim()) additionalProps.attackName = p.attackName.trim();
+            if (p.magicSkills.length > 0) additionalProps.magicSkills = p.magicSkills;
+
+            return { ...partBase, ...additionalProps };
+          });
+
+          // weaknessもundefinedなら追加しない
+          const enemyData: any = {
+            id: Date.now().toString(),
+            name: name.trim(),
+            type: 'enemy',
+            parts: partsData,
+            buffs: [],
+          };
+          if (weakness) enemyData.weakness = weakness;
+
+          await onAdd(enemyData);
+        } else {
+          // 単体の敵
+          const hpMax = parseInt(hp) || 30;
+          const mpMax = parseInt(mp) || 0;
+
+          const enemyData: any = {
+            id: Date.now().toString(),
+            name: name.trim(),
+            type: 'enemy',
+            hp: { current: hpMax, max: hpMax },
+            mp: { current: mpMax, max: mpMax },
+            modifiers: {
+              hitMod: parseInt(hitMod) || 0,
+              dodgeMod: parseInt(dodgeMod) || 0,
+              defense: parseInt(defense) || 0
+            },
+            buffs: [],
+            fixedDamage: parseInt(enemyFixedDamage) || 0,
+          };
+
+          if (enemyAttackName.trim()) enemyData.attackName = enemyAttackName.trim();
+          if (enemyMagicSkills.length > 0) enemyData.magicSkills = enemyMagicSkills;
+          if (weakness) enemyData.weakness = weakness;
+
+          await onAdd(enemyData);
+        }
+      }
+
+      // 成功時のみリセットして閉じる
+      resetForm();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Character add failed:', error);
+      alert('キャラクターの追加に失敗しました。');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    // リセット
+  const resetForm = () => {
     setName('');
     setType('ally');
     setHp('30');
@@ -127,8 +261,14 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
     setDodgeMod('0');
     setDefense('0');
     setHasMultipleParts(false);
-    setParts([{ name: '部位1', hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0' }]);
-    setIsOpen(false);
+    setParts([{ name: '部位1', hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0', attackName: '', fixedDamage: '0', magicSkills: [] }]);
+
+    // 敵追加データリセット
+    setEnemyAttackName('');
+    setEnemyFixedDamage('0');
+    setEnemyMagicSkills([]);
+    setEnemyWeaknessType('');
+    setEnemyWeaknessValue('0');
   };
 
   if (!isOpen) {
@@ -146,7 +286,7 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
   }
 
   return (
-    <div className="bg-stone-900 rounded-lg p-4 border border-stone-700">
+    <div className="bg-stone-900 rounded-lg p-4 border border-stone-700 max-h-[90vh] overflow-y-auto">
       <h3 className="text-lg font-bold text-stone-200 mb-4">新規キャラクター</h3>
 
       <div className="space-y-4">
@@ -171,8 +311,8 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
               type="button"
               onClick={() => { setType('ally'); setHasMultipleParts(false); }}
               className={`flex-1 py-3 rounded font-medium transition-colors text-lg ${type === 'ally'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-stone-800 text-stone-400 active:bg-stone-700'
+                ? 'bg-blue-600 text-white'
+                : 'bg-stone-800 text-stone-400 active:bg-stone-700'
                 }`}
             >
               味方
@@ -181,8 +321,8 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
               type="button"
               onClick={() => setType('enemy')}
               className={`flex-1 py-3 rounded font-medium transition-colors text-lg ${type === 'enemy'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-stone-800 text-stone-400 active:bg-stone-700'
+                ? 'bg-red-600 text-white'
+                : 'bg-stone-800 text-stone-400 active:bg-stone-700'
                 }`}
             >
               敵
@@ -303,14 +443,37 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
         ) : (
           /* 敵キャラクター */
           <>
+            {/* 弱点（共通） */}
+            <div className="bg-red-950/20 rounded p-2 border border-red-900/30 mb-2">
+              <div className="text-xs text-stone-400 mb-1">弱点設定</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={enemyWeaknessType}
+                  onChange={(e) => setEnemyWeaknessType(e.target.value)}
+                  placeholder="炎, 物理など"
+                  className="flex-1 px-2 py-1 bg-stone-800 border-stone-700 rounded text-sm text-stone-200"
+                />
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-stone-500">+</span>
+                  <input
+                    type="number"
+                    value={enemyWeaknessValue}
+                    onChange={(e) => setEnemyWeaknessValue(e.target.value)}
+                    className="w-16 px-2 py-1 bg-stone-800 border-stone-700 rounded text-sm text-stone-200 text-center"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* 複数部位トグル */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setHasMultipleParts(false)}
                 className={`flex-1 py-2 rounded text-sm transition-colors ${!hasMultipleParts
-                    ? 'bg-red-700 text-white'
-                    : 'bg-stone-800 text-stone-400'
+                  ? 'bg-red-700 text-white'
+                  : 'bg-stone-800 text-stone-400'
                   }`}
               >
                 単体
@@ -319,8 +482,8 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
                 type="button"
                 onClick={() => setHasMultipleParts(true)}
                 className={`flex-1 py-2 rounded text-sm transition-colors ${hasMultipleParts
-                    ? 'bg-red-700 text-white'
-                    : 'bg-stone-800 text-stone-400'
+                  ? 'bg-red-700 text-white'
+                  : 'bg-stone-800 text-stone-400'
                   }`}
               >
                 複数部位
@@ -384,6 +547,36 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
                     />
                   </div>
                 </div>
+
+                {/* 攻撃データ入力 */}
+                <div className="border-t border-stone-700 pt-2 mt-2">
+                  <div className="text-xs text-stone-400 mb-2">攻撃データ</div>
+                  <div className="flex gap-2 mb-2">
+                    <div className="flex-1">
+                      <label className="block text-[10px] text-stone-500">攻撃名</label>
+                      <input
+                        type="text"
+                        value={enemyAttackName}
+                        onChange={(e) => setEnemyAttackName(e.target.value)}
+                        placeholder="爪、ブレスなど"
+                        className="w-full px-2 py-1 bg-stone-800 border border-stone-700 rounded text-sm text-stone-200"
+                      />
+                    </div>
+                    <div className="w-20">
+                      <label className="block text-[10px] text-stone-500">固定D(2d+)</label>
+                      <input
+                        type="number"
+                        value={enemyFixedDamage}
+                        onChange={(e) => setEnemyFixedDamage(e.target.value)}
+                        className="w-full px-2 py-1 bg-stone-800 border border-stone-700 rounded text-sm text-stone-200 text-center"
+                      />
+                    </div>
+                  </div>
+                  <MagicSkillsInput
+                    skills={enemyMagicSkills}
+                    onChange={setEnemyMagicSkills}
+                  />
+                </div>
               </>
             ) : (
               /* 複数部位敵 */
@@ -410,7 +603,7 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-5 gap-2 mb-2">
                       <div>
                         <label className="block text-xs text-stone-500 mb-1">HP</label>
                         <input
@@ -462,6 +655,34 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
                         />
                       </div>
                     </div>
+                    {/* 部位ごとの攻撃データ */}
+                    <div className="border-t border-stone-600/50 pt-2">
+                      <div className="flex gap-2 mb-2">
+                        <div className="flex-1">
+                          <label className="block text-[10px] text-stone-500">攻撃名</label>
+                          <input
+                            type="text"
+                            value={part.attackName}
+                            onChange={(e) => updatePart(index, 'attackName', e.target.value)}
+                            placeholder="攻撃名"
+                            className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded text-xs text-stone-200"
+                          />
+                        </div>
+                        <div className="w-20">
+                          <label className="block text-[10px] text-stone-500">固定D</label>
+                          <input
+                            type="number"
+                            value={part.fixedDamage}
+                            onChange={(e) => updatePart(index, 'fixedDamage', e.target.value)}
+                            className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded text-xs text-stone-200 text-center"
+                          />
+                        </div>
+                      </div>
+                      <MagicSkillsInput
+                        skills={part.magicSkills}
+                        onChange={(skills) => updatePart(index, 'magicSkills', skills)}
+                      />
+                    </div>
                   </div>
                 ))}
 
@@ -485,24 +706,44 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="flex-1 py-3 bg-stone-800 text-stone-400 rounded active:bg-stone-700 text-lg"
+            disabled={isSubmitting}
+            className="flex-1 py-3 bg-stone-800 text-stone-400 border border-stone-700 rounded 
+              hover:bg-stone-700 active:bg-stone-600 text-lg transition-colors 
+              disabled:opacity-50 disabled:cursor-not-allowed"
           >
             キャンセル
           </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-            className={`flex-1 py-3 rounded font-bold text-lg transition-colors
-              ${name.trim()
-                ? type === 'ally'
-                  ? 'bg-blue-600 text-white active:bg-blue-500'
-                  : 'bg-red-600 text-white active:bg-red-500'
-                : 'bg-stone-700 text-stone-500'
-              }`}
-          >
-            追加
-          </button>
+
+          {(() => {
+            const isDisabled = !name.trim() || isSubmitting;
+            let buttonClass = "flex-1 py-3 rounded font-bold text-lg transition-all shadow-md ";
+
+            if (isDisabled) {
+              buttonClass += "bg-stone-800 text-stone-600 border border-stone-700 cursor-not-allowed opacity-70";
+            } else if (type === 'ally') {
+              buttonClass += "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/50 active:translate-y-0.5";
+            } else {
+              buttonClass += "bg-red-600 hover:bg-red-500 text-white shadow-red-900/50 active:translate-y-0.5";
+            }
+
+            return (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isDisabled}
+                className={buttonClass}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    追加中...
+                  </span>
+                ) : (
+                  '追加'
+                )}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

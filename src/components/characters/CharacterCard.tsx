@@ -4,12 +4,16 @@
 // - 削除ボタン位置変更
 // - フェードアウトアニメーション
 // - 魔力表示セクション追加
+// - 敵用攻撃セクション追加(Issue#2)
 // ============================================
 
 import { useState } from 'react';
 import type {
   Character,
-  PartyBuff
+  PartyBuff,
+  AllyCharacter,
+  SingleEnemy,
+  MultiPartEnemy
 } from '../../types';
 import { isAlly, isSingleEnemy, isMultiPartEnemy } from '../../types';
 import {
@@ -27,6 +31,7 @@ import {
 } from '../../utils/calc';
 import { BuffBadge } from './BuffBadge';
 import { AttackSection } from './AttackSection';
+import { EnemyAttackSection } from './EnemyAttackSection';
 
 
 interface CharacterCardProps {
@@ -36,9 +41,11 @@ interface CharacterCardProps {
   onEditStats?: (character: Character) => void;
   onAddBuff: (character: Character) => void;
   onRemoveBuff: (charId: string, buffId: string) => void;
-  enemies?: Character[];
+  enemies?: Character[]; // 味方が攻撃する場合のターゲット（=敵一覧）
+  allies?: Character[];  // 敵が攻撃する場合のターゲット（=味方一覧）
   partyBuff?: PartyBuff | null;
   onApplyDamage?: (targetId: string, targetPartId: string, damage: number) => void;
+  onEnemyAttackDamage?: (targetId: string, damage: number) => void;
 }
 
 export const CharacterCard = ({
@@ -49,8 +56,10 @@ export const CharacterCard = ({
   onAddBuff,
   onRemoveBuff,
   enemies = [],
+  allies = [],
   partyBuff,
-  onApplyDamage
+  onApplyDamage,
+  onEnemyAttackDamage
 }: CharacterCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -446,6 +455,15 @@ export const CharacterCard = ({
           enemies={enemies}
           partyBuff={partyBuff ?? null}
           onApplyDamage={onApplyDamage}
+        />
+      )}
+
+      {/* 攻撃セクション（敵のみ） */}
+      {isEnemy && allies.length > 0 && onEnemyAttackDamage && (isSingleEnemy(character) || isMultiPartEnemy(character)) && (
+        <EnemyAttackSection
+          enemy={character as SingleEnemy | MultiPartEnemy}
+          allies={allies as AllyCharacter[]}
+          onApplyDamage={onEnemyAttackDamage}
         />
       )}
 

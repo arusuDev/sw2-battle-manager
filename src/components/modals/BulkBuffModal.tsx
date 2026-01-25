@@ -26,9 +26,9 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
 
   // バフ設定
   const [buffMode, setBuffMode] = useState<'preset' | 'custom'>('preset');
-  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [selectedPreset, setSelectedPreset] = useState('');
   const [customName, setCustomName] = useState('');
-  const [customEffect, setCustomEffect] = useState('');
+  const customEffect = ''; // UI未実装のため固定
   const [customDuration, setCustomDuration] = useState('3');
   const [customBuffType, setCustomBuffType] = useState<BuffType>('hit');
   const [customBuffValue, setCustomBuffValue] = useState('1');
@@ -36,7 +36,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
   // 鼓咆設定
   const [kohoMode, setKohoMode] = useState<'preset' | 'custom'>('preset');
   const [kohoType, setKohoType] = useState<'attack' | 'defense'>('attack');
-  const [selectedKoho, setSelectedKoho] = useState<string>('');
+  const [selectedKoho, setSelectedKoho] = useState('');
 
   // ============================================
   // 対象リストの生成
@@ -250,8 +250,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
           <button
             onClick={() => { setActiveTab('allies'); setSelectedTargets(new Set()); }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${activeTab === 'allies'
-                ? 'bg-blue-700 text-white'
-                : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+              ? 'bg-blue-700 text-white'
+              : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
               }`}
           >
             味方
@@ -259,8 +259,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
           <button
             onClick={() => { setActiveTab('enemies'); setSelectedTargets(new Set()); }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${activeTab === 'enemies'
-                ? 'bg-red-700 text-white'
-                : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+              ? 'bg-red-700 text-white'
+              : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
               }`}
           >
             敵
@@ -268,8 +268,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
           <button
             onClick={() => { setActiveTab('koho'); setSelectedTargets(new Set()); }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${activeTab === 'koho'
-                ? 'bg-amber-700 text-white'
-                : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+              ? 'bg-amber-700 text-white'
+              : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
               }`}
           >
             🎺 鼓咆
@@ -313,10 +313,10 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                     key={key}
                     onClick={() => toggleTarget(target)}
                     className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${isSelected
-                        ? target.isEnemy
-                          ? 'bg-red-600 text-white'
-                          : 'bg-blue-600 text-white'
-                        : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
+                      ? target.isEnemy
+                        ? 'bg-red-600 text-white'
+                        : 'bg-blue-600 text-white'
+                      : 'bg-stone-700 text-stone-400 hover:bg-stone-600'
                       }`}
                   >
                     {displayName}
@@ -337,8 +337,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                 <button
                   onClick={() => setBuffMode('preset')}
                   className={`flex-1 py-2 rounded text-sm transition-colors ${buffMode === 'preset'
-                      ? 'bg-purple-700 text-white'
-                      : 'bg-stone-700 text-stone-400'
+                    ? 'bg-purple-700 text-white'
+                    : 'bg-stone-700 text-stone-400'
                     }`}
                 >
                   プリセット
@@ -346,8 +346,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                 <button
                   onClick={() => setBuffMode('custom')}
                   className={`flex-1 py-2 rounded text-sm transition-colors ${buffMode === 'custom'
-                      ? 'bg-purple-700 text-white'
-                      : 'bg-stone-700 text-stone-400'
+                    ? 'bg-purple-700 text-white'
+                    : 'bg-stone-700 text-stone-400'
                     }`}
                 >
                   カスタム
@@ -362,8 +362,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                       key={preset.name}
                       onClick={() => setSelectedPreset(preset.name)}
                       className={`p-2 rounded text-left text-sm transition-colors ${selectedPreset === preset.name
-                          ? 'bg-purple-700 text-white'
-                          : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
                         }`}
                     >
                       <div className="font-medium">{preset.name}</div>
@@ -441,8 +441,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                 <button
                   onClick={() => setKohoMode('preset')}
                   className={`flex-1 py-2 rounded text-sm transition-colors ${kohoMode === 'preset'
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-stone-700 text-stone-400'
+                    ? 'bg-amber-700 text-white'
+                    : 'bg-stone-700 text-stone-400'
                     }`}
                 >
                   プリセット
@@ -450,8 +450,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                 <button
                   onClick={() => setKohoMode('custom')}
                   className={`flex-1 py-2 rounded text-sm transition-colors ${kohoMode === 'custom'
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-stone-700 text-stone-400'
+                    ? 'bg-amber-700 text-white'
+                    : 'bg-stone-700 text-stone-400'
                     }`}
                 >
                   カスタム
@@ -465,8 +465,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                     <button
                       onClick={() => setKohoType('attack')}
                       className={`flex-1 py-2 rounded text-sm transition-colors ${kohoType === 'attack'
-                          ? 'bg-red-700 text-white'
-                          : 'bg-stone-700 text-stone-400'
+                        ? 'bg-red-700 text-white'
+                        : 'bg-stone-700 text-stone-400'
                         }`}
                     >
                       攻撃系
@@ -474,8 +474,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                     <button
                       onClick={() => setKohoType('defense')}
                       className={`flex-1 py-2 rounded text-sm transition-colors ${kohoType === 'defense'
-                          ? 'bg-blue-700 text-white'
-                          : 'bg-stone-700 text-stone-400'
+                        ? 'bg-blue-700 text-white'
+                        : 'bg-stone-700 text-stone-400'
                         }`}
                     >
                       防御系
@@ -489,8 +489,8 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
                         key={koho.name}
                         onClick={() => setSelectedKoho(koho.name)}
                         className={`w-full p-3 rounded text-left transition-colors ${selectedKoho === koho.name
-                            ? 'bg-amber-700 text-white'
-                            : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                          ? 'bg-amber-700 text-white'
+                          : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
                           }`}
                       >
                         <div className="font-medium">🎺 {koho.name}</div>

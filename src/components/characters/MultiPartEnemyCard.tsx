@@ -3,11 +3,13 @@
 // - 削除確認ダイアログ追加
 // - 削除ボタン位置変更
 // - フェードアウトアニメーション
+// - 敵用攻撃セクション追加(Issue#2)
 // ============================================
 
 import { useState } from 'react';
-import type { MultiPartEnemy, Part } from '../../types';
+import type { MultiPartEnemy, Part, AllyCharacter, Character } from '../../types';
 import { getHpBarColor, getHpPercent } from '../../utils/calc';
+import { EnemyAttackSection } from './EnemyAttackSection';
 import { BuffBadge } from './BuffBadge';
 
 interface MultiPartEnemyCardProps {
@@ -16,6 +18,8 @@ interface MultiPartEnemyCardProps {
   onDelete: (id: string) => void;
   onAddBuff: (character: MultiPartEnemy) => void;
   onRemoveBuff: (charId: string, buffId: string, partId?: string) => void;
+  allies?: Character[];  // 味方一覧（ターゲット候補）
+  onEnemyAttackDamage?: (targetId: string, damage: number) => void;
 }
 
 export const MultiPartEnemyCard = ({
@@ -23,7 +27,9 @@ export const MultiPartEnemyCard = ({
   onUpdate,
   onDelete,
   onAddBuff,
-  onRemoveBuff
+  onRemoveBuff,
+  allies = [],
+  onEnemyAttackDamage
 }: MultiPartEnemyCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -329,6 +335,17 @@ export const MultiPartEnemyCard = ({
           <div className="text-xs text-stone-600">なし</div>
         )}
       </div>
+
+      {/* 攻撃セクション */}
+      {allies.length > 0 && onEnemyAttackDamage && (
+        <div className="mb-3">
+          <EnemyAttackSection
+            enemy={character}
+            allies={allies as AllyCharacter[]}
+            onApplyDamage={onEnemyAttackDamage}
+          />
+        </div>
+      )}
 
       {/* 削除ボタン（カード下部に配置） */}
       <div className="mt-4 pt-3 border-t border-stone-700/50">
