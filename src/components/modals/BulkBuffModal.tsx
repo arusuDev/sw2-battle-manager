@@ -28,7 +28,6 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
   const [buffMode, setBuffMode] = useState<'preset' | 'custom'>('preset');
   const [selectedPreset, setSelectedPreset] = useState('');
   const [customName, setCustomName] = useState('');
-  const customEffect = ''; // UI未実装のため固定
   const [customDuration, setCustomDuration] = useState('3');
   const [customBuffType, setCustomBuffType] = useState<BuffType>('hit');
   const [customBuffValue, setCustomBuffValue] = useState('1');
@@ -165,7 +164,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         buff = {
           id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: customName.trim(),
-          effect: customEffect.trim() || `${customBuffType}+${customBuffValue}`,
+          effect: `${customBuffType}+${customBuffValue}`,
           remaining: -1, // 永続
           buffType: customBuffType,
           buffValue: parseInt(customBuffValue) || 0,
@@ -197,7 +196,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         buff = {
           id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: customName.trim(),
-          effect: customEffect.trim() || `${customBuffType}+${customBuffValue}`,
+          effect: `${customBuffType}+${customBuffValue}`,
           remaining: parseInt(customDuration) || 3,
           buffType: customBuffType,
           buffValue: parseInt(customBuffValue) || 0,

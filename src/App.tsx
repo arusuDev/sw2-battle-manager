@@ -77,7 +77,8 @@ function BattleScreen() {
       const newExpired: ExpiredBuffNotification[] = [];
 
       // 全キャラのバフを減少させる
-      characters.forEach(async (char) => {
+      const updatePromises: Promise<void>[] = [];
+      for (const char of characters) {
         const { remainingBuffs, expiredBuffs } = processBuffsOnRoundEnd(char.buffs || []);
 
         if (expiredBuffs.length > 0) {
@@ -92,9 +93,10 @@ function BattleScreen() {
 
         // バフが変更されたら更新
         if (JSON.stringify(remainingBuffs) !== JSON.stringify(char.buffs)) {
-          await updateCharacter({ ...char, buffs: remainingBuffs });
+          updatePromises.push(updateCharacter({ ...char, buffs: remainingBuffs }));
         }
-      });
+      }
+      Promise.all(updatePromises).catch(console.error);
 
       if (newExpired.length > 0) {
         setExpiredBuffs(newExpired);
@@ -122,7 +124,7 @@ function BattleScreen() {
   // ============================================
   // Buff Handlers（Firestore経由）
   // ============================================
-  const handleAddBuff = async (charId: string, buff: any) => {
+  const handleAddBuff = async (charId: string, buff: Buff) => {
     await addBuff(charId, buff);
   };
 

@@ -182,7 +182,7 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
           // 複数部位の敵
           const partsData = parts.map(p => {
             const partBase = {
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
               name: p.name.trim() || '部位',
               hp: { current: parseInt(p.hp) || 30, max: parseInt(p.hp) || 30 },
               mp: { current: parseInt(p.mp) || 0, max: parseInt(p.mp) || 0 },
