@@ -77,7 +77,8 @@ function BattleScreen() {
       const newExpired: ExpiredBuffNotification[] = [];
 
       // 全キャラのバフを減少させる
-      characters.forEach(async (char) => {
+      const updatePromises: Promise<void>[] = [];
+      for (const char of characters) {
         const { remainingBuffs, expiredBuffs } = processBuffsOnRoundEnd(char.buffs || []);
 
         if (expiredBuffs.length > 0) {
@@ -92,9 +93,10 @@ function BattleScreen() {
 
         // バフが変更されたら更新
         if (JSON.stringify(remainingBuffs) !== JSON.stringify(char.buffs)) {
-          await updateCharacter({ ...char, buffs: remainingBuffs });
+          updatePromises.push(updateCharacter({ ...char, buffs: remainingBuffs }));
         }
-      });
+      }
+      Promise.all(updatePromises).catch(console.error);
 
       if (newExpired.length > 0) {
         setExpiredBuffs(newExpired);
@@ -122,7 +124,7 @@ function BattleScreen() {
   // ============================================
   // Buff Handlers（Firestore経由）
   // ============================================
-  const handleAddBuff = async (charId: string, buff: any) => {
+  const handleAddBuff = async (charId: string, buff: Buff) => {
     await addBuff(charId, buff);
   };
 
@@ -142,7 +144,7 @@ function BattleScreen() {
           if (part.id === target.partId) {
             const newBuffs = addBuffWithKohoReplace(part.buffs || [], {
               ...buff,
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
             });
             return { ...part, buffs: newBuffs };
           }
@@ -153,7 +155,7 @@ function BattleScreen() {
         // 通常キャラにバフ付与
         const newBuffs = addBuffWithKohoReplace(char.buffs || [], {
           ...buff,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
         });
         await updateCharacter({ ...char, buffs: newBuffs });
       }
