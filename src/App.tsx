@@ -142,7 +142,7 @@ function BattleScreen() {
           if (part.id === target.partId) {
             const newBuffs = addBuffWithKohoReplace(part.buffs || [], {
               ...buff,
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
             });
             return { ...part, buffs: newBuffs };
           }
@@ -153,7 +153,7 @@ function BattleScreen() {
         // 通常キャラにバフ付与
         const newBuffs = addBuffWithKohoReplace(char.buffs || [], {
           ...buff,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
         });
         await updateCharacter({ ...char, buffs: newBuffs });
       }

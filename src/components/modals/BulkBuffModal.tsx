@@ -51,7 +51,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
           characterName: char.name,
           isEnemy: false,
         });
-      } else if ((activeTab === 'enemies' || activeTab === 'koho') && char.type === 'enemy') {
+      } else if (activeTab === 'enemies' && char.type === 'enemy') {
         if (isMultiPartEnemy(char)) {
           // 複数部位敵は部位単位で追加
           char.parts.forEach(part => {
@@ -150,7 +150,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         }
 
         buff = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: preset.name,
           effect: preset.effect,
           remaining: -1, // 永続
@@ -163,7 +163,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         if (!customName.trim()) return;
 
         buff = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: customName.trim(),
           effect: customEffect.trim() || `${customBuffType}+${customBuffValue}`,
           remaining: -1, // 永続
@@ -183,7 +183,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         if (!preset) return;
 
         buff = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: preset.name,
           effect: preset.effect,
           remaining: preset.duration,
@@ -195,7 +195,7 @@ export const BulkBuffModal = ({ characters, onApply, onRemoveKoho, onClose }: Bu
         if (!customName.trim()) return;
 
         buff = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
           name: customName.trim(),
           effect: customEffect.trim() || `${customBuffType}+${customBuffValue}`,
           remaining: parseInt(customDuration) || 3,
