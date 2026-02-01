@@ -23,7 +23,8 @@ interface EnemyAttackState {
     targetId: string;
     power: number; // 威力（魔法用）
     critValue: number; // C値（魔法用）
-    fixedDamageBonus: number; // 追加ダメージ（物理・魔法共通）
+    physicalDamageBonus: number; // 追加ダメージ（物理用）
+    magicDamageBonus: number; // 追加ダメージ（魔法用）
     rolls: { d1: string; d2: string }[];
     isResisted: boolean;
 }
@@ -40,7 +41,8 @@ export const EnemyAttackSection = ({
         targetId: '',
         power: 20,
         critValue: 10,
-        fixedDamageBonus: 0,
+        physicalDamageBonus: 0,
+        magicDamageBonus: 0,
         rolls: [{ d1: '', d2: '' }],
         isResisted: false,
     });
@@ -117,9 +119,13 @@ export const EnemyAttackSection = ({
         let validRolls = 0;
 
         if (state.attackType === 'physical') {
-            // 物理: 固定値 + 追加ダメージ - 防護点
-            // 出目は計算に使わない（メモ用）
-            totalDamage = attackParams.damage + state.fixedDamageBonus;
+            // 物理: 定値 + 出目合計 + 追加 - 防護
+            const roll = state.rolls[0];
+            const d1 = parseInt(roll.d1) || 0;
+            const d2 = parseInt(roll.d2) || 0;
+            const diceTotal = (roll.d1 !== '' || roll.d2 !== '') ? d1 + d2 : 0;
+
+            totalDamage = attackParams.damage + diceTotal + state.physicalDamageBonus;
             if (targetStats) {
                 totalDamage -= targetStats.defense;
             }
@@ -140,7 +146,7 @@ export const EnemyAttackSection = ({
 
             if (validRolls === 0) return 0; // 出目未入力なら0
 
-            totalDamage = powerDamage + attackParams.magicPower + state.fixedDamageBonus;
+            totalDamage = powerDamage + attackParams.magicPower + state.magicDamageBonus;
 
             // 抵抗半減（切り上げ）
             if (state.isResisted) {
@@ -287,31 +293,56 @@ export const EnemyAttackSection = ({
                 </div>
             </div>
 
-            {/* 追加ダメージ */}
-            <div className="mb-2">
-                <label className="block text-xs text-stone-500 mb-1">追加ダメージ (物理/魔法共通)</label>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setState(prev => ({ ...prev, fixedDamageBonus: prev.fixedDamageBonus - 1 }))}
-                        className="p-1 bg-stone-700 rounded text-stone-300"
-                    >-</button>
-                    <input
-                        type="number"
-                        value={state.fixedDamageBonus}
-                        onChange={(e) => setState(prev => ({ ...prev, fixedDamageBonus: parseInt(e.target.value) || 0 }))}
-                        className="flex-1 px-2 py-1 bg-stone-800 border border-stone-700 rounded text-center text-stone-200"
-                    />
-                    <button
-                        onClick={() => setState(prev => ({ ...prev, fixedDamageBonus: prev.fixedDamageBonus + 1 }))}
-                        className="p-1 bg-stone-700 rounded text-stone-300"
-                    >+</button>
+            {/* 追加ダメージ（物理用） */}
+            {state.attackType === 'physical' && (
+                <div className="mb-2">
+                    <label className="block text-xs text-stone-500 mb-1">追加ダメージ (物理)</label>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setState(prev => ({ ...prev, physicalDamageBonus: prev.physicalDamageBonus - 1 }))}
+                            className="p-1 bg-stone-700 rounded text-stone-300"
+                        >-</button>
+                        <input
+                            type="number"
+                            value={state.physicalDamageBonus}
+                            onChange={(e) => setState(prev => ({ ...prev, physicalDamageBonus: parseInt(e.target.value) || 0 }))}
+                            className="flex-1 px-2 py-1 bg-stone-800 border border-stone-700 rounded text-center text-stone-200"
+                        />
+                        <button
+                            onClick={() => setState(prev => ({ ...prev, physicalDamageBonus: prev.physicalDamageBonus + 1 }))}
+                            className="p-1 bg-stone-700 rounded text-stone-300"
+                        >+</button>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* 追加ダメージ（魔法用） */}
+            {state.attackType === 'magic' && (
+                <div className="mb-2">
+                    <label className="block text-xs text-stone-500 mb-1">追加ダメージ (魔法)</label>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setState(prev => ({ ...prev, magicDamageBonus: prev.magicDamageBonus - 1 }))}
+                            className="p-1 bg-stone-700 rounded text-stone-300"
+                        >-</button>
+                        <input
+                            type="number"
+                            value={state.magicDamageBonus}
+                            onChange={(e) => setState(prev => ({ ...prev, magicDamageBonus: parseInt(e.target.value) || 0 }))}
+                            className="flex-1 px-2 py-1 bg-stone-800 border border-stone-700 rounded text-center text-stone-200"
+                        />
+                        <button
+                            onClick={() => setState(prev => ({ ...prev, magicDamageBonus: prev.magicDamageBonus + 1 }))}
+                            className="p-1 bg-stone-700 rounded text-stone-300"
+                        >+</button>
+                    </div>
+                </div>
+            )}
 
             {/* ダイスロール（手動入力） */}
             <div className="mb-3 p-2 bg-stone-800 rounded">
                 <div className="text-xs text-stone-400 mb-2">
-                    {state.attackType === 'physical' ? '出目確認用 (計算には使用しません)' : '威力表用出目'}
+                    {state.attackType === 'physical' ? '出目 (ダメージに加算)' : '威力表用出目'}
                 </div>
 
                 <div className="space-y-1">
@@ -381,8 +412,14 @@ export const EnemyAttackSection = ({
                 </div>
                 <div className="text-[10px] text-stone-500 text-center mb-2">
                     {state.attackType === 'physical'
-                        ? `定値${attackParams.damage} + 追加${state.fixedDamageBonus} - 防護${targetStats?.defense ?? 0}`
-                        : `威力表 + 魔力${attackParams.magicPower} + 追加${state.fixedDamageBonus} ${state.isResisted ? '/ 2' : ''}`
+                        ? (() => {
+                            const roll = state.rolls[0];
+                            const d1 = parseInt(roll.d1) || 0;
+                            const d2 = parseInt(roll.d2) || 0;
+                            const diceTotal = (roll.d1 !== '' || roll.d2 !== '') ? d1 + d2 : 0;
+                            return `定値${attackParams.damage} + 出目${diceTotal} + 追加${state.physicalDamageBonus} - 防護${targetStats?.defense ?? 0}`;
+                        })()
+                        : `威力表 + 魔力${attackParams.magicPower} + 追加${state.magicDamageBonus} ${state.isResisted ? '/ 2' : ''}`
                     }
                 </div>
                 <button
@@ -403,7 +440,7 @@ export const EnemyAttackSection = ({
             {/* リセットボタン */}
             <div className="mt-2">
                 <button
-                    onClick={() => setState(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false, fixedDamageBonus: 0 }))}
+                    onClick={() => setState(prev => ({ ...prev, rolls: [{ d1: '', d2: '' }], isResisted: false, physicalDamageBonus: 0, magicDamageBonus: 0 }))}
                     className="w-full py-1 bg-stone-700 hover:bg-stone-600 text-stone-300 text-sm rounded transition-colors"
                 >
                     入力クリア
