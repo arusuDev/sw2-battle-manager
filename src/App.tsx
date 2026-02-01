@@ -54,6 +54,7 @@ function BattleScreen() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showBulkBuffModal, setShowBulkBuffModal] = useState(false);
   const [prevRound, setPrevRound] = useState(room?.currentRound ?? 1);
+  const [charPassword, setCharPassword] = useState('');
 
   // ルームのラウンド（Firestoreから同期）
   const round = room?.currentRound ?? 1;
@@ -284,8 +285,14 @@ function BattleScreen() {
   // ============================================
   // Derived State
   // ============================================
-  const allies = characters.filter(c => c.type === 'ally');
-  const enemies = characters.filter(c => c.type === 'enemy');
+  const isCharVisible = (c: Character) => {
+    if (!c.hidden) return true;
+    if (charPassword && c.password && c.password === charPassword) return true;
+    return false;
+  };
+  const allies = characters.filter(c => c.type === 'ally' && isCharVisible(c));
+  const enemies = characters.filter(c => c.type === 'enemy' && isCharVisible(c));
+  const hiddenCount = characters.filter(c => c.hidden).length;
 
   // ============================================
   // Render
@@ -345,6 +352,33 @@ function BattleScreen() {
           </p>
         </div>
       </div>
+
+      {/* 合言葉入力（非表示キャラがいる場合のみ表示） */}
+      {hiddenCount > 0 && (
+        <div className="max-w-4xl mx-auto px-4 pt-3">
+          <div className="bg-stone-900/80 border border-amber-700/50 rounded-lg p-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-amber-400 whitespace-nowrap">合言葉</span>
+              <input
+                type="text"
+                value={charPassword}
+                onChange={(e) => setCharPassword(e.target.value)}
+                placeholder="合言葉を入力して非表示キャラを表示"
+                className="flex-1 px-2 py-1 bg-stone-800 border border-stone-700 rounded
+                  text-stone-200 placeholder-stone-500 text-xs focus:outline-none focus:border-amber-600"
+              />
+              {charPassword && (
+                <button
+                  onClick={() => setCharPassword('')}
+                  className="text-stone-500 hover:text-stone-300 text-xs"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 鼓咆（全体バフ）エリア */}
       <div className="max-w-4xl mx-auto px-4 pt-3">
@@ -518,7 +552,7 @@ function BattleScreen() {
 
       {showBulkBuffModal && (
         <BulkBuffModal
-          characters={characters}
+          characters={characters.filter(isCharVisible)}
           onApply={handleBulkBuffApply}
           onRemoveKoho={handleBulkRemoveKoho}
           onClose={() => setShowBulkBuffModal(false)}
