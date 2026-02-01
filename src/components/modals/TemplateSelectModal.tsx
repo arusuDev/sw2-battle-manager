@@ -11,9 +11,10 @@ import { MAGIC_SKILLS } from '../../data/skills';
 interface TemplateSelectModalProps {
   onAdd: (character: Character) => void;
   onClose: () => void;
+  customTemplates?: CharacterTemplate[];
 }
 
-export const TemplateSelectModal = ({ onAdd, onClose }: TemplateSelectModalProps) => {
+export const TemplateSelectModal = ({ onAdd, onClose, customTemplates = [] }: TemplateSelectModalProps) => {
   const [tab, setTab] = useState<'allies' | 'enemies'>('allies');
   const [password, setPassword] = useState('');
 
@@ -87,15 +88,21 @@ export const TemplateSelectModal = ({ onAdd, onClose }: TemplateSelectModalProps
     });
   };
 
+  // カスタムテンプレートを味方・敵に分類
+  const customAllies = customTemplates.filter(t => t.type === 'ally') as CharacterTemplate[];
+  const customEnemies = customTemplates.filter(t => t.type === 'enemy') as CharacterTemplate[];
+
   const templates = tab === 'allies'
-    ? filterTemplates(CHARACTER_TEMPLATES.allies)
-    : filterTemplates(CHARACTER_TEMPLATES.enemies);
+    ? filterTemplates([...CHARACTER_TEMPLATES.allies, ...customAllies])
+    : filterTemplates([...CHARACTER_TEMPLATES.enemies, ...customEnemies]);
 
   // 合言葉で解放されたテンプレート数（両タブ合計）
-  const unlockedCount = password ? [
+  const allTemplates = [
     ...CHARACTER_TEMPLATES.allies,
-    ...CHARACTER_TEMPLATES.enemies
-  ].filter(t => t.hidden && t.password === password).length : 0;
+    ...CHARACTER_TEMPLATES.enemies,
+    ...customTemplates,
+  ];
+  const unlockedCount = password ? allTemplates.filter(t => t.hidden && t.password === password).length : 0;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

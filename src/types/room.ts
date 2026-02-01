@@ -3,7 +3,7 @@
 // ============================================
 
 import { Timestamp } from 'firebase/firestore';
-import type { Character, PartyBuff } from './index';
+import type { Character, CharacterTemplate, PartyBuff } from './index';
 
 // ルーム情報
 export interface Room {
@@ -13,6 +13,7 @@ export interface Room {
   currentRound: number;
   partyBuff: PartyBuff | null;
   passwords: string[];  // 合言葉リスト
+  customTemplates?: CharacterTemplate[];  // ユーザー登録テンプレート
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

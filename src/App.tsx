@@ -41,6 +41,7 @@ function BattleScreen() {
     deleteCharacter,
     addBuff,
     removeBuff,
+    addTemplate,
   } = useRoom();
 
   // ============================================
@@ -123,7 +124,7 @@ function BattleScreen() {
           });
 
           if (hasChanges) {
-            updatedChar = { ...updatedChar, parts: updatedParts };
+            updatedChar = { ...updatedChar, parts: updatedParts } as Character;
           }
         }
 
@@ -389,7 +390,7 @@ function BattleScreen() {
           <div className="text-center py-12">
             <p className="text-stone-500 mb-6">キャラクターがいません</p>
             <div className="flex flex-col gap-3">
-              <AddCharacterForm onAdd={handleAddCharacter} />
+              <AddCharacterForm onAdd={handleAddCharacter} onAddTemplate={addTemplate} />
               <button
                 onClick={() => setShowTemplateModal(true)}
                 className="w-full py-4 border-2 border-dashed border-amber-600/50 rounded-lg
@@ -469,7 +470,7 @@ function BattleScreen() {
 
             {/* キャラ追加ボタン */}
             <div className="flex flex-col gap-3">
-              <AddCharacterForm onAdd={handleAddCharacter} />
+              <AddCharacterForm onAdd={handleAddCharacter} onAddTemplate={addTemplate} />
               <button
                 onClick={() => setShowTemplateModal(true)}
                 className="w-full py-4 border-2 border-dashed border-amber-600/50 rounded-lg
@@ -513,6 +514,7 @@ function BattleScreen() {
         <TemplateSelectModal
           onAdd={handleAddCharacter}
           onClose={() => setShowTemplateModal(false)}
+          customTemplates={room?.customTemplates}
         />
       )}
 
