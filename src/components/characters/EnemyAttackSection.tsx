@@ -88,6 +88,12 @@ export const EnemyAttackSection = ({
     }, [target]);
 
     const updateRoll = (index: number, field: 'd1' | 'd2', value: string) => {
+        // 空文字（クリア）は許可、数値は1~6に制限
+        if (value !== '') {
+            const num = parseInt(value);
+            if (isNaN(num) || num < 1 || num > 6) return;
+        }
+
         setState(prev => {
             const newRolls = [...prev.rolls];
             newRolls[index] = { ...newRolls[index], [field]: value };
