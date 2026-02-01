@@ -78,6 +78,10 @@ function BattleScreen() {
 
       // 全キャラのバフを減少させる
       characters.forEach(async (char) => {
+        let updatedChar = { ...char };
+        let hasChanges = false;
+
+        // 本体バフの処理
         const { remainingBuffs, expiredBuffs } = processBuffsOnRoundEnd(char.buffs || []);
 
         if (expiredBuffs.length > 0) {
@@ -90,9 +94,41 @@ function BattleScreen() {
           });
         }
 
-        // バフが変更されたら更新
         if (JSON.stringify(remainingBuffs) !== JSON.stringify(char.buffs)) {
-          await updateCharacter({ ...char, buffs: remainingBuffs });
+          updatedChar = { ...updatedChar, buffs: remainingBuffs };
+          hasChanges = true;
+        }
+
+        // 複数部位敵の部位バフの処理
+        if (isMultiPartEnemy(char)) {
+          const updatedParts = char.parts.map(part => {
+            const { remainingBuffs: partRemaining, expiredBuffs: partExpired } =
+              processBuffsOnRoundEnd(part.buffs || []);
+
+            if (partExpired.length > 0) {
+              partExpired.forEach(buff => {
+                newExpired.push({
+                  id: `expired-${char.id}-${part.id}-${buff.name}-${Date.now()}`,
+                  characterName: `${char.name}(${part.name})`,
+                  buffName: buff.name
+                });
+              });
+            }
+
+            if (JSON.stringify(partRemaining) !== JSON.stringify(part.buffs)) {
+              hasChanges = true;
+              return { ...part, buffs: partRemaining };
+            }
+            return part;
+          });
+
+          if (hasChanges) {
+            updatedChar = { ...updatedChar, parts: updatedParts };
+          }
+        }
+
+        if (hasChanges) {
+          await updateCharacter(updatedChar);
         }
       });
 
