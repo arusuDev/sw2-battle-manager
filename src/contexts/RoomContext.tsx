@@ -20,9 +20,10 @@ import {
   addCharacter as addCharacterToFirestore,
   updateCharacter as updateCharacterToFirestore,
   deleteCharacter as deleteCharacterFromFirestore,
+  addCustomTemplate as addCustomTemplateToFirestore,
 } from '../lib/firestore';
 import type { Room, RoomMember, RoomState } from '../types/room';
-import type { Character, PartyBuff, Buff } from '../types';
+import type { Character, CharacterTemplate, PartyBuff, Buff } from '../types';
 import { isMultiPartEnemy } from '../types';
 
 // ============================================
@@ -41,6 +42,8 @@ interface RoomContextValue extends RoomState {
   // バフ操作
   addBuff: (charId: string, buff: Buff) => Promise<void>;
   removeBuff: (charId: string, buffId: string, partId?: string) => Promise<void>;
+  // テンプレート操作
+  addTemplate: (template: CharacterTemplate) => Promise<void>;
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null);
@@ -235,6 +238,20 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
     }
   }, [roomId, characters]);
 
+  // ============================================
+  // テンプレート操作
+  // ============================================
+
+  const addTemplate = useCallback(async (template: CharacterTemplate) => {
+    if (!roomId) return;
+
+    try {
+      await addCustomTemplateToFirestore(roomId, template);
+    } catch (err) {
+      console.error('テンプレート追加エラー:', err);
+    }
+  }, [roomId]);
+
   const value: RoomContextValue = {
     room,
     members,
@@ -251,6 +268,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
     deleteCharacter,
     addBuff,
     removeBuff,
+    addTemplate,
   };
 
   return (

@@ -3,11 +3,12 @@
 // ============================================
 
 import { useState } from 'react';
-import type { Character, Stats, EnemyMagicSkill, Weakness } from '../../types';
+import type { Character, CharacterTemplate, Stats, EnemyMagicSkill, Weakness } from '../../types';
 import { SKILL_CATEGORIES, MAGIC_SKILLS } from '../../data/skills';
 
 interface AddCharacterFormProps {
   onAdd: (character: Character) => Promise<void>;
+  onAddTemplate?: (template: CharacterTemplate) => Promise<void>;
 }
 
 // 部位入力用インターフェース
@@ -99,7 +100,7 @@ const MagicSkillsInput = ({
   );
 };
 
-export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
+export const AddCharacterForm = ({ onAdd, onAddTemplate }: AddCharacterFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState('');
@@ -152,107 +153,145 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
   const handleSubmit = async () => {
     if (!name.trim() || isSubmitting) return;
 
+    // 合言葉設定時はテンプレートとして登録
+    const isTemplateRegistration = usePassword && password.trim() && onAddTemplate;
+
     setIsSubmitting(true);
     try {
-      if (type === 'ally') {
-        // 味方キャラクター
-        const hpMax = parseInt(hp) || 30;
-        const mpMax = parseInt(mp) || 20;
-
-        const allyData: any = {
-          id: Date.now().toString(),
-          name: name.trim(),
-          type: 'ally',
-          hp: { current: hpMax, max: hpMax },
-          mp: { current: mpMax, max: mpMax },
-          stats: { ...stats },
-          skillLevels: { ...skillLevels },
-          modifiers: {
-            hitMod: parseInt(hitMod) || 0,
-            dodgeMod: parseInt(dodgeMod) || 0,
-            defense: parseInt(defense) || 0
-          },
-          buffs: [],
-        };
-        if (usePassword && password.trim()) {
-          allyData.password = password.trim();
-          allyData.hidden = true;
-        }
-        await onAdd(allyData);
-      } else {
-        // 敵キャラクター（単体 or 複数部位）
-        const weakness: Weakness | undefined = enemyWeaknessType.trim()
-          ? { type: enemyWeaknessType.trim(), value: parseInt(enemyWeaknessValue) || 0 }
-          : undefined;
-
-
-
-        if (hasMultipleParts) {
-          // 複数部位の敵
-          const partsData = parts.map(p => {
-            const partBase = {
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-              name: p.name.trim() || '部位',
-              hp: { current: parseInt(p.hp) || 30, max: parseInt(p.hp) || 30 },
-              mp: { current: parseInt(p.mp) || 0, max: parseInt(p.mp) || 0 },
-              hit: parseInt(p.hit) || 0,
-              dodge: parseInt(p.dodge) || 0,
-              defense: parseInt(p.defense) || 0,
-              fixedDamage: parseInt(p.fixedDamage) || 0,
-            };
-
-            // undefinedを含まないように条件付きで追加
-            const additionalProps: any = {};
-            if (p.attackName.trim()) additionalProps.attackName = p.attackName.trim();
-            if (p.magicSkills.length > 0) additionalProps.magicSkills = p.magicSkills;
-
-            return { ...partBase, ...additionalProps };
-          });
-
-          // weaknessもundefinedなら追加しない
-          const enemyData: any = {
-            id: Date.now().toString(),
+      if (isTemplateRegistration) {
+        // テンプレートとして登録（合言葉付き）
+        const templateId = Date.now().toString();
+        if (type === 'ally') {
+          const template: CharacterTemplate = {
+            id: templateId,
             name: name.trim(),
-            type: 'enemy',
-            parts: partsData,
-            buffs: [],
+            type: 'ally',
+            stats: { ...stats },
+            skillLevels: { ...skillLevels },
+            modifiers: {
+              hitMod: parseInt(hitMod) || 0,
+              dodgeMod: parseInt(dodgeMod) || 0,
+              defense: parseInt(defense) || 0,
+            },
+            hidden: true,
+            password: password.trim(),
           };
-          if (weakness) enemyData.weakness = weakness;
-          if (usePassword && password.trim()) {
-            enemyData.password = password.trim();
-            enemyData.hidden = true;
-          }
-
-          await onAdd(enemyData);
-        } else {
-          // 単体の敵
-          const hpMax = parseInt(hp) || 30;
-          const mpMax = parseInt(mp) || 0;
-
-          const enemyData: any = {
-            id: Date.now().toString(),
+          await onAddTemplate(template);
+        } else if (hasMultipleParts) {
+          const templateParts = parts.map(p => ({
+            name: p.name.trim() || '部位',
+            hp: parseInt(p.hp) || 30,
+            mp: parseInt(p.mp) || 0,
+            hit: parseInt(p.hit) || 0,
+            dodge: parseInt(p.dodge) || 0,
+            defense: parseInt(p.defense) || 0,
+          }));
+          const template: CharacterTemplate = {
+            id: templateId,
             name: name.trim(),
             type: 'enemy',
+            parts: templateParts,
+            hidden: true,
+            password: password.trim(),
+          };
+          await onAddTemplate(template);
+        } else {
+          const template: CharacterTemplate = {
+            id: templateId,
+            name: name.trim(),
+            type: 'enemy',
+            hp: parseInt(hp) || 30,
+            mp: parseInt(mp) || 0,
+            hit: parseInt(hitMod) || 0,
+            dodge: parseInt(dodgeMod) || 0,
+            defense: parseInt(defense) || 0,
+            hidden: true,
+            password: password.trim(),
+          };
+          await onAddTemplate(template);
+        }
+      } else {
+        // 通常のキャラクター追加
+        if (type === 'ally') {
+          const hpMax = parseInt(hp) || 30;
+          const mpMax = parseInt(mp) || 20;
+
+          const allyData: any = {
+            id: Date.now().toString(),
+            name: name.trim(),
+            type: 'ally',
             hp: { current: hpMax, max: hpMax },
             mp: { current: mpMax, max: mpMax },
+            stats: { ...stats },
+            skillLevels: { ...skillLevels },
             modifiers: {
               hitMod: parseInt(hitMod) || 0,
               dodgeMod: parseInt(dodgeMod) || 0,
               defense: parseInt(defense) || 0
             },
             buffs: [],
-            fixedDamage: parseInt(enemyFixedDamage) || 0,
           };
+          await onAdd(allyData);
+        } else {
+          const weakness: Weakness | undefined = enemyWeaknessType.trim()
+            ? { type: enemyWeaknessType.trim(), value: parseInt(enemyWeaknessValue) || 0 }
+            : undefined;
 
-          if (enemyAttackName.trim()) enemyData.attackName = enemyAttackName.trim();
-          if (enemyMagicSkills.length > 0) enemyData.magicSkills = enemyMagicSkills;
-          if (weakness) enemyData.weakness = weakness;
-          if (usePassword && password.trim()) {
-            enemyData.password = password.trim();
-            enemyData.hidden = true;
+          if (hasMultipleParts) {
+            const partsData = parts.map(p => {
+              const partBase = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                name: p.name.trim() || '部位',
+                hp: { current: parseInt(p.hp) || 30, max: parseInt(p.hp) || 30 },
+                mp: { current: parseInt(p.mp) || 0, max: parseInt(p.mp) || 0 },
+                hit: parseInt(p.hit) || 0,
+                dodge: parseInt(p.dodge) || 0,
+                defense: parseInt(p.defense) || 0,
+                fixedDamage: parseInt(p.fixedDamage) || 0,
+              };
+
+              const additionalProps: any = {};
+              if (p.attackName.trim()) additionalProps.attackName = p.attackName.trim();
+              if (p.magicSkills.length > 0) additionalProps.magicSkills = p.magicSkills;
+
+              return { ...partBase, ...additionalProps };
+            });
+
+            const enemyData: any = {
+              id: Date.now().toString(),
+              name: name.trim(),
+              type: 'enemy',
+              parts: partsData,
+              buffs: [],
+            };
+            if (weakness) enemyData.weakness = weakness;
+
+            await onAdd(enemyData);
+          } else {
+            const hpMax = parseInt(hp) || 30;
+            const mpMax = parseInt(mp) || 0;
+
+            const enemyData: any = {
+              id: Date.now().toString(),
+              name: name.trim(),
+              type: 'enemy',
+              hp: { current: hpMax, max: hpMax },
+              mp: { current: mpMax, max: mpMax },
+              modifiers: {
+                hitMod: parseInt(hitMod) || 0,
+                dodgeMod: parseInt(dodgeMod) || 0,
+                defense: parseInt(defense) || 0
+              },
+              buffs: [],
+              fixedDamage: parseInt(enemyFixedDamage) || 0,
+            };
+
+            if (enemyAttackName.trim()) enemyData.attackName = enemyAttackName.trim();
+            if (enemyMagicSkills.length > 0) enemyData.magicSkills = enemyMagicSkills;
+            if (weakness) enemyData.weakness = weakness;
+
+            await onAdd(enemyData);
           }
-
-          await onAdd(enemyData);
         }
       }
 
@@ -261,7 +300,7 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
       setIsOpen(false);
     } catch (error) {
       console.error('Character add failed:', error);
-      alert('キャラクターの追加に失敗しました。');
+      alert(isTemplateRegistration ? 'テンプレートの登録に失敗しました。' : 'キャラクターの追加に失敗しました。');
     } finally {
       setIsSubmitting(false);
     }
@@ -781,10 +820,10 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    追加中...
+                    {usePassword && password.trim() ? 'テンプレート登録中...' : '追加中...'}
                   </span>
                 ) : (
-                  '追加'
+                  usePassword && password.trim() ? 'テンプレートとして登録' : '追加'
                 )}
               </button>
             );

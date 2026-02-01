@@ -257,7 +257,32 @@ export const setPartyBuff = async (
 // キャラクター管理
 // ============================================
 
-import type { Character } from '../types';
+import type { Character, CharacterTemplate } from '../types';
+
+// ============================================
+// テンプレート管理
+// ============================================
+
+/**
+ * カスタムテンプレートを追加
+ */
+export const addCustomTemplate = async (
+  roomId: string,
+  template: CharacterTemplate
+): Promise<void> => {
+  const roomRef = doc(db, 'rooms', roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    throw new Error('ルームが見つかりません');
+  }
+
+  const currentTemplates = roomSnap.data().customTemplates || [];
+  await updateDoc(roomRef, {
+    customTemplates: [...currentTemplates, template],
+    updatedAt: serverTimestamp(),
+  });
+};
 
 /**
  * キャラクターを追加
