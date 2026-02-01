@@ -59,6 +59,7 @@ export interface RoomState {
   characters: Character[];  // UIではCharacterとして扱う
   currentMember: RoomMember | null;
   isGM: boolean;
+  isGMPresent: boolean;  // GMがメンバー一覧に存在するか
   loading: boolean;
   error: Error | null;
 }

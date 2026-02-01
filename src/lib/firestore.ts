@@ -254,6 +254,32 @@ export const setPartyBuff = async (
 };
 
 // ============================================
+// GM管理
+// ============================================
+
+/**
+ * GMに昇格する（ルームのgmUserIdを更新し、メンバーのisGMフラグも更新）
+ */
+export const promoteToGM = async (
+  roomId: string,
+  userId: string
+): Promise<void> => {
+  const roomRef = doc(db, 'rooms', roomId);
+
+  // ルームのgmUserIdを更新
+  await updateDoc(roomRef, {
+    gmUserId: userId,
+    updatedAt: serverTimestamp(),
+  });
+
+  // 新GMのメンバーデータを更新
+  const newGmMemberRef = doc(db, 'rooms', roomId, 'members', userId);
+  await updateDoc(newGmMemberRef, {
+    isGM: true,
+  });
+};
+
+// ============================================
 // キャラクター管理
 // ============================================
 
