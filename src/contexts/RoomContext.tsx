@@ -148,13 +148,9 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
 
   // GM昇格
   const becomeGM = useCallback(async () => {
-    if (!roomId || !user) return;
+    if (!roomId || !user) throw new Error('ルーム情報が取得できません');
 
-    try {
-      await promoteToGMFirestore(roomId, user.uid);
-    } catch (err) {
-      console.error('GM昇格エラー:', err);
-    }
+    await promoteToGMFirestore(roomId, user.uid);
   }, [roomId, user]);
 
   // ============================================

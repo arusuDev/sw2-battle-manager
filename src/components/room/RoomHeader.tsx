@@ -10,6 +10,8 @@ export const RoomHeader: React.FC = () => {
   const [showMembers, setShowMembers] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showGMConfirm, setShowGMConfirm] = useState(false);
+  const [gmPromoting, setGMPromoting] = useState(false);
+  const [gmPromoteError, setGMPromoteError] = useState<string | null>(null);
 
   if (!room) return null;
 
@@ -209,7 +211,7 @@ export const RoomHeader: React.FC = () => {
       {showGMConfirm && (
         <div
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowGMConfirm(false)}
+          onClick={() => { if (!gmPromoting) { setShowGMConfirm(false); setGMPromoteError(null); } }}
         >
           <div
             className="bg-stone-800 rounded-lg w-full max-w-sm p-6"
@@ -221,23 +223,42 @@ export const RoomHeader: React.FC = () => {
             <p className="text-stone-400 text-sm mb-6">
               GMに昇格すると、ラウンド進行や敵キャラクターの管理など、ルームの管理権限を取得します。
             </p>
+            {gmPromoteError && (
+              <div className="text-red-400 text-sm mb-4">
+                {gmPromoteError}
+              </div>
+            )}
             <div className="flex gap-2">
               <button
-                onClick={() => setShowGMConfirm(false)}
+                onClick={() => { setShowGMConfirm(false); setGMPromoteError(null); }}
+                disabled={gmPromoting}
                 className="flex-1 py-3 bg-stone-700 text-stone-300 rounded
-                  hover:bg-stone-600 transition-colors"
+                  hover:bg-stone-600 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 キャンセル
               </button>
               <button
-                onClick={() => {
-                  becomeGM();
-                  setShowGMConfirm(false);
+                onClick={async () => {
+                  setGMPromoting(true);
+                  setGMPromoteError(null);
+                  try {
+                    await becomeGM();
+                    setShowGMConfirm(false);
+                  } catch (err) {
+                    setGMPromoteError(
+                      err instanceof Error ? err.message : 'GM昇格に失敗しました'
+                    );
+                  } finally {
+                    setGMPromoting(false);
+                  }
                 }}
+                disabled={gmPromoting}
                 className="flex-1 py-3 bg-amber-700 text-white rounded
-                  hover:bg-amber-600 transition-colors"
+                  hover:bg-amber-600 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                GMに昇格する
+                {gmPromoting ? '昇格中...' : 'GMに昇格する'}
               </button>
             </div>
           </div>
