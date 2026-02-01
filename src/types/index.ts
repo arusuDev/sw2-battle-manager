@@ -111,6 +111,8 @@ interface BaseCharacter {
   id: string;
   name: string;
   buffs: Buff[];
+  password?: string;  // 合言葉（設定時は非表示）
+  hidden?: boolean;   // 非表示フラグ
 }
 
 // 味方キャラクター
