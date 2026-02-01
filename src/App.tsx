@@ -132,14 +132,25 @@ function BattleScreen() {
 
   // 一括バフ適用
   const handleBulkBuffApply = async (targets: BulkBuffTarget[], buff: Buff) => {
+    // 同一キャラの複数部位を一括更新するため、characterIdでグルーピング
+    const targetsByCharId = new Map<string, BulkBuffTarget[]>();
     for (const target of targets) {
-      const char = characters.find(c => c.id === target.characterId);
+      const list = targetsByCharId.get(target.characterId) || [];
+      list.push(target);
+      targetsByCharId.set(target.characterId, list);
+    }
+
+    for (const [charId, charTargets] of targetsByCharId) {
+      const char = characters.find(c => c.id === charId);
       if (!char) continue;
 
-      if (target.partId && isMultiPartEnemy(char)) {
-        // 複数部位敵の部位にバフ付与
+      const hasPartTargets = charTargets.some(t => t.partId);
+
+      if (hasPartTargets && isMultiPartEnemy(char)) {
+        // 複数部位敵: 選択された全部位にまとめてバフ付与
+        const selectedPartIds = new Set(charTargets.map(t => t.partId).filter(Boolean));
         const updatedParts = char.parts.map(part => {
-          if (part.id === target.partId) {
+          if (selectedPartIds.has(part.id)) {
             const newBuffs = addBuffWithKohoReplace(part.buffs || [], {
               ...buff,
               id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -163,14 +174,25 @@ function BattleScreen() {
 
   // 鼓咆一括解除
   const handleBulkRemoveKoho = async (targets: BulkBuffTarget[]) => {
+    // 同一キャラの複数部位を一括更新するため、characterIdでグルーピング
+    const targetsByCharId = new Map<string, BulkBuffTarget[]>();
     for (const target of targets) {
-      const char = characters.find(c => c.id === target.characterId);
+      const list = targetsByCharId.get(target.characterId) || [];
+      list.push(target);
+      targetsByCharId.set(target.characterId, list);
+    }
+
+    for (const [charId, charTargets] of targetsByCharId) {
+      const char = characters.find(c => c.id === charId);
       if (!char) continue;
 
-      if (target.partId && isMultiPartEnemy(char)) {
-        // 複数部位敵の部位から鼓咆を削除
+      const hasPartTargets = charTargets.some(t => t.partId);
+
+      if (hasPartTargets && isMultiPartEnemy(char)) {
+        // 複数部位敵の選択された全部位から鼓咆を一括削除
+        const selectedPartIds = new Set(charTargets.map(t => t.partId).filter(Boolean));
         const updatedParts = char.parts.map(part => {
-          if (part.id === target.partId) {
+          if (selectedPartIds.has(part.id)) {
             const newBuffs = (part.buffs || []).filter(b => !b.isKoho);
             return { ...part, buffs: newBuffs };
           }
