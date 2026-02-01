@@ -120,6 +120,10 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
   const [dodgeMod, setDodgeMod] = useState('0');
   const [defense, setDefense] = useState('0');
 
+  // 合言葉
+  const [usePassword, setUsePassword] = useState(false);
+  const [password, setPassword] = useState('');
+
   // 敵用追加ステータス（単体）
   const [enemyAttackName, setEnemyAttackName] = useState('');
   const [enemyFixedDamage, setEnemyFixedDamage] = useState('0');
@@ -155,7 +159,7 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
         const hpMax = parseInt(hp) || 30;
         const mpMax = parseInt(mp) || 20;
 
-        await onAdd({
+        const allyData: any = {
           id: Date.now().toString(),
           name: name.trim(),
           type: 'ally',
@@ -169,7 +173,12 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
             defense: parseInt(defense) || 0
           },
           buffs: [],
-        });
+        };
+        if (usePassword && password.trim()) {
+          allyData.password = password.trim();
+          allyData.hidden = true;
+        }
+        await onAdd(allyData);
       } else {
         // 敵キャラクター（単体 or 複数部位）
         const weakness: Weakness | undefined = enemyWeaknessType.trim()
@@ -209,6 +218,10 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
             buffs: [],
           };
           if (weakness) enemyData.weakness = weakness;
+          if (usePassword && password.trim()) {
+            enemyData.password = password.trim();
+            enemyData.hidden = true;
+          }
 
           await onAdd(enemyData);
         } else {
@@ -234,6 +247,10 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
           if (enemyAttackName.trim()) enemyData.attackName = enemyAttackName.trim();
           if (enemyMagicSkills.length > 0) enemyData.magicSkills = enemyMagicSkills;
           if (weakness) enemyData.weakness = weakness;
+          if (usePassword && password.trim()) {
+            enemyData.password = password.trim();
+            enemyData.hidden = true;
+          }
 
           await onAdd(enemyData);
         }
@@ -262,6 +279,8 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
     setDefense('0');
     setHasMultipleParts(false);
     setParts([{ name: '部位1', hp: '30', mp: '0', hit: '0', dodge: '0', defense: '0', attackName: '', fixedDamage: '0', magicSkills: [] }]);
+    setUsePassword(false);
+    setPassword('');
 
     // 敵追加データリセット
     setEnemyAttackName('');
@@ -301,6 +320,32 @@ export const AddCharacterForm = ({ onAdd }: AddCharacterFormProps) => {
             className="w-full px-3 py-3 bg-stone-800 border border-stone-700 rounded
               text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600 text-lg"
           />
+        </div>
+
+        {/* 合言葉設定 */}
+        <div>
+          <label className="flex items-center gap-2 text-xs text-stone-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usePassword}
+              onChange={(e) => {
+                setUsePassword(e.target.checked);
+                if (!e.target.checked) setPassword('');
+              }}
+              className="rounded bg-stone-700 border-stone-600"
+            />
+            合言葉を設定して非表示にする
+          </label>
+          {usePassword && (
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="合言葉を入力"
+              className="w-full mt-1 px-3 py-2 bg-stone-800 border border-stone-700 rounded
+                text-stone-200 placeholder-stone-500 text-sm focus:outline-none focus:border-amber-600"
+            />
+          )}
         </div>
 
         {/* タイプ選択 */}
