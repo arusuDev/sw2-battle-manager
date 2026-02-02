@@ -258,23 +258,15 @@ export const setPartyBuff = async (
 // ============================================
 
 /**
- * GMに昇格する（ルームのgmUserIdを更新し、メンバーのisGMフラグも更新）
+ * GMに昇格する（自分のメンバードキュメントのisGMフラグを更新）
+ * ※ルームドキュメントの更新はセキュリティルールで制限されるため、メンバーのフラグのみ変更
  */
 export const promoteToGM = async (
   roomId: string,
   userId: string
 ): Promise<void> => {
-  const roomRef = doc(db, 'rooms', roomId);
-
-  // ルームのgmUserIdを更新
-  await updateDoc(roomRef, {
-    gmUserId: userId,
-    updatedAt: serverTimestamp(),
-  });
-
-  // 新GMのメンバーデータを更新
-  const newGmMemberRef = doc(db, 'rooms', roomId, 'members', userId);
-  await updateDoc(newGmMemberRef, {
+  const memberRef = doc(db, 'rooms', roomId, 'members', userId);
+  await updateDoc(memberRef, {
     isGM: true,
   });
 };

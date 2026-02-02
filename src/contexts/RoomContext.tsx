@@ -75,8 +75,8 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
 
   // 現在のメンバー情報
   const currentMember = members.find((m) => m.odId === user?.uid) || null;
-  const isGM = room?.gmUserId === user?.uid;
-  const isGMPresent = room ? members.some((m) => m.odId === room.gmUserId) : true;
+  const isGM = currentMember?.isGM ?? false;
+  const isGMPresent = members.some((m) => m.isGM);
 
   // ルーム情報の購読
   useEffect(() => {
