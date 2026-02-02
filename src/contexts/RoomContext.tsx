@@ -21,6 +21,7 @@ import {
   updateCharacter as updateCharacterToFirestore,
   deleteCharacter as deleteCharacterFromFirestore,
   addCustomTemplate as addCustomTemplateToFirestore,
+  promoteToGM as promoteToGMFirestore,
 } from '../lib/firestore';
 import type { Room, RoomMember, RoomState } from '../types/room';
 import type { Character, CharacterTemplate, PartyBuff, Buff } from '../types';
@@ -35,6 +36,7 @@ interface RoomContextValue extends RoomState {
   exitRoom: () => Promise<void>;
   nextRound: () => Promise<void>;
   updatePartyBuff: (buff: PartyBuff | null) => Promise<void>;
+  becomeGM: () => Promise<void>;
   // キャラクター操作
   addCharacter: (character: Character) => Promise<void>;
   updateCharacter: (character: Character) => Promise<void>;
@@ -73,7 +75,8 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
 
   // 現在のメンバー情報
   const currentMember = members.find((m) => m.odId === user?.uid) || null;
-  const isGM = room?.gmUserId === user?.uid;
+  const isGM = currentMember?.isGM ?? false;
+  const isGMPresent = members.some((m) => m.isGM);
 
   // ルーム情報の購読
   useEffect(() => {
@@ -142,6 +145,13 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
       console.error('鼓咆更新エラー:', err);
     }
   }, [roomId]);
+
+  // GM昇格
+  const becomeGM = useCallback(async () => {
+    if (!roomId || !user) throw new Error('ルーム情報が取得できません');
+
+    await promoteToGMFirestore(roomId, user.uid);
+  }, [roomId, user]);
 
   // ============================================
   // キャラクター操作
@@ -258,11 +268,13 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({
     characters,
     currentMember,
     isGM,
+    isGMPresent,
     loading,
     error,
     exitRoom,
     nextRound,
     updatePartyBuff,
+    becomeGM,
     addCharacter,
     updateCharacter,
     deleteCharacter,

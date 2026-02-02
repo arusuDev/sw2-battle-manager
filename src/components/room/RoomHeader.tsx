@@ -6,9 +6,12 @@ import { useState } from 'react';
 import { useRoom } from '../../contexts/RoomContext';
 
 export const RoomHeader: React.FC = () => {
-  const { room, members, currentMember, isGM, exitRoom, nextRound } = useRoom();
+  const { room, members, currentMember, isGM, isGMPresent, exitRoom, nextRound, becomeGM } = useRoom();
   const [showMembers, setShowMembers] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showGMConfirm, setShowGMConfirm] = useState(false);
+  const [gmPromoting, setGMPromoting] = useState(false);
+  const [gmPromoteError, setGMPromoteError] = useState<string | null>(null);
 
   if (!room) return null;
 
@@ -85,6 +88,22 @@ export const RoomHeader: React.FC = () => {
         </div>
       </div>
 
+      {/* GM不在通知バー */}
+      {!isGMPresent && !isGM && (
+        <div className="bg-amber-900/50 border-b border-amber-700 px-4 py-2 flex items-center justify-between">
+          <span className="text-amber-200 text-sm">
+            GMが不在です。GMに昇格してルームを管理できます。
+          </span>
+          <button
+            onClick={() => setShowGMConfirm(true)}
+            className="text-sm bg-amber-700 text-amber-100 px-3 py-1 rounded
+              hover:bg-amber-600 transition-colors"
+          >
+            GMに昇格
+          </button>
+        </div>
+      )}
+
       {/* メンバー一覧モーダル */}
       {showMembers && (
         <div
@@ -122,7 +141,19 @@ export const RoomHeader: React.FC = () => {
                 </div>
               ))}
             </div>
-            <div className="px-4 py-3 border-t border-stone-700">
+            <div className="px-4 py-3 border-t border-stone-700 space-y-2">
+              {!isGMPresent && !isGM && (
+                <button
+                  onClick={() => {
+                    setShowMembers(false);
+                    setShowGMConfirm(true);
+                  }}
+                  className="w-full py-2 bg-amber-700 text-amber-100 rounded
+                    hover:bg-amber-600 transition-colors"
+                >
+                  GMに昇格する
+                </button>
+              )}
               <button
                 onClick={() => setShowMembers(false)}
                 className="w-full py-2 bg-stone-700 text-stone-300 rounded
@@ -171,6 +202,63 @@ export const RoomHeader: React.FC = () => {
                   hover:bg-red-600 transition-colors"
               >
                 退出する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* GM昇格確認モーダル */}
+      {showGMConfirm && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => { if (!gmPromoting) { setShowGMConfirm(false); setGMPromoteError(null); } }}
+        >
+          <div
+            className="bg-stone-800 rounded-lg w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-stone-200 mb-4">
+              GMに昇格しますか？
+            </h3>
+            <p className="text-stone-400 text-sm mb-6">
+              GMに昇格すると、ラウンド進行や敵キャラクターの管理など、ルームの管理権限を取得します。
+            </p>
+            {gmPromoteError && (
+              <div className="text-red-400 text-sm mb-4">
+                {gmPromoteError}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowGMConfirm(false); setGMPromoteError(null); }}
+                disabled={gmPromoting}
+                className="flex-1 py-3 bg-stone-700 text-stone-300 rounded
+                  hover:bg-stone-600 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={async () => {
+                  setGMPromoting(true);
+                  setGMPromoteError(null);
+                  try {
+                    await becomeGM();
+                    setShowGMConfirm(false);
+                  } catch (err) {
+                    setGMPromoteError(
+                      err instanceof Error ? err.message : 'GM昇格に失敗しました'
+                    );
+                  } finally {
+                    setGMPromoting(false);
+                  }
+                }}
+                disabled={gmPromoting}
+                className="flex-1 py-3 bg-amber-700 text-white rounded
+                  hover:bg-amber-600 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {gmPromoting ? '昇格中...' : 'GMに昇格する'}
               </button>
             </div>
           </div>
