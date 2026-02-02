@@ -27,7 +27,9 @@ import {
   getMagicPowerList,
   getHpStatus,
   getHpBarColor,
-  getHpPercent
+  getHpPercent,
+  ZERO_BUFF_EFFECTS,
+  getStatColor
 } from '../../utils/calc';
 import { BuffBadge } from './BuffBadge';
 import { AttackSection } from './AttackSection';
@@ -348,7 +350,7 @@ export const CharacterCard = ({
             return (
               <div key={key} className="bg-stone-800/50 rounded px-1 py-1">
                 <div className="text-xs text-stone-500">{labels[key]}</div>
-                <div className={`text-sm ${buffBonus > 0 ? 'text-green-400' : 'text-stone-300'}`}>
+                <div className={`text-sm ${buffBonus > 0 ? 'text-green-400' : buffBonus < 0 ? 'text-red-400' : 'text-stone-300'}`}>
                   {totalValue}
                 </div>
                 <div className="text-xs text-amber-400">B:{bonus}</div>
@@ -359,40 +361,52 @@ export const CharacterCard = ({
       )}
 
       {/* 戦闘値（味方のみ） */}
-      {isAlly(character) && (
-        <div className="grid grid-cols-5 gap-1 mb-3 text-center">
-          <div className="bg-stone-800/50 rounded px-1 py-1">
-            <div className="text-xs text-stone-500">命中</div>
-            <div className="text-sm text-stone-200">
-              {calcHitValue(character, buffEffects)}
+      {isAlly(character) && (() => {
+        const hitVal = calcHitValue(character, buffEffects);
+        const hitBase = calcHitValue(character, ZERO_BUFF_EFFECTS);
+        const dodgeVal = calcDodgeValue(character, buffEffects);
+        const dodgeBase = calcDodgeValue(character, ZERO_BUFF_EFFECTS);
+        const defVal = calcDefenseValue(character, buffEffects);
+        const defBase = calcDefenseValue(character, ZERO_BUFF_EFFECTS);
+        const vitResVal = calcVitResist(character, buffEffects);
+        const vitResBase = calcVitResist(character, ZERO_BUFF_EFFECTS);
+        const mndResVal = calcMndResist(character, buffEffects);
+        const mndResBase = calcMndResist(character, ZERO_BUFF_EFFECTS);
+        return (
+          <div className="grid grid-cols-5 gap-1 mb-3 text-center">
+            <div className="bg-stone-800/50 rounded px-1 py-1">
+              <div className="text-xs text-stone-500">命中</div>
+              <div className={`text-sm ${getStatColor(hitVal, hitBase, 'text-stone-200')}`}>
+                {hitVal}
+              </div>
+            </div>
+            <div className="bg-stone-800/50 rounded px-1 py-1">
+              <div className="text-xs text-stone-500">回避</div>
+              <div className={`text-sm ${getStatColor(dodgeVal, dodgeBase, 'text-stone-200')}`}>
+                {dodgeVal}
+              </div>
+            </div>
+            <div className="bg-stone-800/50 rounded px-1 py-1">
+              <div className="text-xs text-stone-500">防護</div>
+              <div className={`text-sm ${getStatColor(defVal, defBase, 'text-stone-200')}`}>
+                {defVal}
+              </div>
+            </div>
+            <div className="bg-stone-800/50 rounded px-1 py-1">
+              <div className="text-xs text-stone-500">生抵</div>
+              <div className={`text-sm ${getStatColor(vitResVal, vitResBase, 'text-stone-200')}`}>
+                {vitResVal}
+              </div>
+            </div>
+            <div className="bg-stone-800/50 rounded px-1 py-1">
+              <div className="text-xs text-stone-500">精抵</div>
+              <div className={`text-sm ${getStatColor(mndResVal, mndResBase, 'text-stone-200')}`}>
+                {mndResVal}
+              </div>
             </div>
           </div>
-          <div className="bg-stone-800/50 rounded px-1 py-1">
-            <div className="text-xs text-stone-500">回避</div>
-            <div className="text-sm text-stone-200">
-              {calcDodgeValue(character, buffEffects)}
-            </div>
-          </div>
-          <div className="bg-stone-800/50 rounded px-1 py-1">
-            <div className="text-xs text-stone-500">防護</div>
-            <div className="text-sm text-stone-200">
-              {calcDefenseValue(character, buffEffects)}
-            </div>
-          </div>
-          <div className="bg-stone-800/50 rounded px-1 py-1">
-            <div className="text-xs text-stone-500">生抵</div>
-            <div className="text-sm text-stone-200">
-              {calcVitResist(character, buffEffects)}
-            </div>
-          </div>
-          <div className="bg-stone-800/50 rounded px-1 py-1">
-            <div className="text-xs text-stone-500">精抵</div>
-            <div className="text-sm text-stone-200">
-              {calcMndResist(character, buffEffects)}
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 魔力表示（味方で魔法技能がある場合のみ） */}
       {isAlly(character) && magicPowerList.length > 0 && (
@@ -408,15 +422,15 @@ export const CharacterCard = ({
                   <div className="text-xs text-stone-400">{magic.magicName}</div>
                   <div className="text-xs text-stone-500">Lv.{magic.level}</div>
                 </div>
-                <div className={`text-lg font-bold ${buffEffects.magicPower > 0 ? 'text-green-400' : 'text-indigo-300'}`}>
+                <div className={`text-lg font-bold ${buffEffects.magicPower > 0 ? 'text-green-400' : buffEffects.magicPower < 0 ? 'text-red-400' : 'text-indigo-300'}`}>
                   {magic.magicPower}
                 </div>
               </div>
             ))}
           </div>
-          {buffEffects.magicPower > 0 && (
-            <div className="text-xs text-green-400 mt-1">
-              ※魔力バフ +{buffEffects.magicPower} 適用中
+          {buffEffects.magicPower !== 0 && (
+            <div className={`text-xs mt-1 ${buffEffects.magicPower > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ※魔力{buffEffects.magicPower > 0 ? 'バフ' : 'デバフ'} {buffEffects.magicPower > 0 ? '+' : ''}{buffEffects.magicPower} 適用中
             </div>
           )}
         </div>

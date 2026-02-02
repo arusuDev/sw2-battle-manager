@@ -198,6 +198,28 @@ export const getMagicPowerList = (
 };
 
 /**
+ * ゼロバフ効果（初期状態との比較用）
+ */
+export const ZERO_BUFF_EFFECTS: BuffEffects = {
+  hit: 0, dodge: 0, defense: 0,
+  vitResist: 0, mndResist: 0,
+  strBonus: 0, power: 0, magicPower: 0,
+  magicDefense: 0, physicalReduce: 0, magicReduce: 0,
+  dex: 0, agi: 0, str: 0, vit: 0, int: 0, mnd: 0,
+};
+
+/**
+ * 値の変動に応じたテキストカラーを返す
+ * diff > 0 → 緑（バフ）、diff < 0 → 赤（デバフ）、diff === 0 → デフォルト色
+ */
+export const getStatColor = (current: number, base: number, defaultColor: string = 'text-stone-300'): string => {
+  const diff = current - base;
+  if (diff > 0) return 'text-green-400';
+  if (diff < 0) return 'text-red-400';
+  return defaultColor;
+};
+
+/**
  * HPの状態を取得
  */
 export const getHpStatus = (
