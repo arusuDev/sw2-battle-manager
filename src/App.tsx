@@ -313,7 +313,7 @@ function BattleScreen() {
 
       {/* ラウンド操作 */}
       <div className="bg-stone-950/95 border-b border-stone-800">
-        <div className="max-w-4xl mx-auto px-4 py-3">
+        <div className="relative max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
               <div className="text-xs text-stone-500">ROUND</div>
