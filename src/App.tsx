@@ -209,42 +209,6 @@ function BattleScreen() {
     setShowBulkBuffModal(false);
   };
 
-  // 鼓咆一括解除
-  const handleBulkRemoveKoho = async (targets: BulkBuffTarget[]) => {
-    // 同一キャラの複数部位を一括更新するため、characterIdでグルーピング
-    const targetsByCharId = new Map<string, BulkBuffTarget[]>();
-    for (const target of targets) {
-      const list = targetsByCharId.get(target.characterId) || [];
-      list.push(target);
-      targetsByCharId.set(target.characterId, list);
-    }
-
-    for (const [charId, charTargets] of targetsByCharId) {
-      const char = characters.find(c => c.id === charId);
-      if (!char) continue;
-
-      const hasPartTargets = charTargets.some(t => t.partId);
-
-      if (hasPartTargets && isMultiPartEnemy(char)) {
-        // 複数部位敵の選択された全部位から鼓咆を一括削除
-        const selectedPartIds = new Set(charTargets.map(t => t.partId).filter(Boolean));
-        const updatedParts = char.parts.map(part => {
-          if (selectedPartIds.has(part.id)) {
-            const newBuffs = (part.buffs || []).filter(b => !b.isKoho);
-            return { ...part, buffs: newBuffs };
-          }
-          return part;
-        });
-        await updateCharacter({ ...char, parts: updatedParts });
-      } else {
-        // 通常キャラから鼓咆を削除
-        const newBuffs = (char.buffs || []).filter(b => !b.isKoho);
-        await updateCharacter({ ...char, buffs: newBuffs });
-      }
-    }
-    setShowBulkBuffModal(false);
-  };
-
   // ============================================
   // Damage Application
   // ============================================
@@ -522,7 +486,6 @@ function BattleScreen() {
         <BulkBuffModal
           characters={characters}
           onApply={handleBulkBuffApply}
-          onRemoveKoho={handleBulkRemoveKoho}
           onClose={() => setShowBulkBuffModal(false)}
         />
       )}
