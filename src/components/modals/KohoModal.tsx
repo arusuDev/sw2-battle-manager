@@ -3,7 +3,7 @@
 // ============================================
 
 import { useState } from 'react';
-import type { PartyBuff } from '../../types';
+import type { PartyBuff, KohoPreset } from '../../types';
 import { KOHO_PRESETS } from '../../data/presets';
 
 interface KohoModalProps {
@@ -12,40 +12,110 @@ interface KohoModalProps {
   onClose: () => void;
 }
 
+type KohoType = 'attack' | 'defense' | 'evasion' | 'resist';
+
+const KOHO_TYPE_CONFIG: Record<KohoType, { label: string; color: string; bgActive: string; bgHover: string; border: string; text: string }> = {
+  attack: {
+    label: '攻撃系',
+    color: 'orange',
+    bgActive: 'bg-orange-700 border-orange-500',
+    bgHover: 'bg-orange-900/50 hover:bg-orange-800/60 active:bg-orange-700/70 border-orange-700/50',
+    border: 'border-orange-600',
+    text: 'text-orange-400',
+  },
+  defense: {
+    label: '防御系',
+    color: 'cyan',
+    bgActive: 'bg-cyan-700 border-cyan-500',
+    bgHover: 'bg-cyan-900/50 hover:bg-cyan-800/60 active:bg-cyan-700/70 border-cyan-700/50',
+    border: 'border-cyan-600',
+    text: 'text-cyan-400',
+  },
+  evasion: {
+    label: '回避系',
+    color: 'green',
+    bgActive: 'bg-green-700 border-green-500',
+    bgHover: 'bg-green-900/50 hover:bg-green-800/60 active:bg-green-700/70 border-green-700/50',
+    border: 'border-green-600',
+    text: 'text-green-400',
+  },
+  resist: {
+    label: '抵抗系',
+    color: 'purple',
+    bgActive: 'bg-purple-700 border-purple-500',
+    bgHover: 'bg-purple-900/50 hover:bg-purple-800/60 active:bg-purple-700/70 border-purple-700/50',
+    border: 'border-purple-600',
+    text: 'text-purple-400',
+  },
+};
+
 export const KohoModal = ({ partyBuff, onSet, onClose }: KohoModalProps) => {
   const [customName, setCustomName] = useState('');
   const [customEffect, setCustomEffect] = useState('');
-  const [customType, setCustomType] = useState<'attack' | 'defense'>('attack');
-  const [customPhysDmg, setCustomPhysDmg] = useState('0');
-  const [customMagicDmg, setCustomMagicDmg] = useState('0');
-  const [customPhysReduce, setCustomPhysReduce] = useState('0');
-  const [customMagicReduce, setCustomMagicReduce] = useState('0');
+  const [customType, setCustomType] = useState<KohoType>('attack');
 
-  const handlePresetSelect = (type: 'attack' | 'defense', koho: typeof KOHO_PRESETS.attack[0]) => {
-    onSet({ 
-      type, 
-      name: koho.name, 
+  const handlePresetSelect = (type: KohoType, koho: KohoPreset) => {
+    onSet({
+      type,
+      name: koho.name,
       effect: koho.effect,
-      physicalDamage: koho.physicalDamage || 0,
-      magicDamage: koho.magicDamage || 0,
-      physicalReduce: koho.physicalReduce || 0,
-      magicReduce: koho.magicReduce || 0,
+      // 攻撃系
+      physicalDamage: koho.physicalDamage,
+      magicDamage: koho.magicDamage,
+      hit: koho.hit,
+      // 防御系
+      defense: koho.defense,
+      physicalReduce: koho.physicalReduce,
+      magicReduce: koho.magicReduce,
+      // 回避系
+      dodge: koho.dodge,
+      damageReduce: koho.damageReduce,
+      // 抵抗系
+      vitResist: koho.vitResist,
+      mndResist: koho.mndResist,
+      // ペナルティ
+      dodgePenalty: koho.dodgePenalty,
+      defensePenalty: koho.defensePenalty,
+      physicalDamagePenalty: koho.physicalDamagePenalty,
+      vitResistPenalty: koho.vitResistPenalty,
+      mndResistPenalty: koho.mndResistPenalty,
     });
     onClose();
   };
 
   const handleCustomAdd = () => {
     if (!customName.trim()) return;
-    onSet({ 
+    onSet({
       type: customType,
-      name: customName.trim(), 
+      name: customName.trim(),
       effect: customEffect.trim() || '効果',
-      physicalDamage: parseInt(customPhysDmg) || 0,
-      magicDamage: parseInt(customMagicDmg) || 0,
-      physicalReduce: parseInt(customPhysReduce) || 0,
-      magicReduce: parseInt(customMagicReduce) || 0,
     });
     onClose();
+  };
+
+  const renderKohoSection = (type: KohoType, presets: KohoPreset[]) => {
+    const config = KOHO_TYPE_CONFIG[type];
+    return (
+      <div className="mb-4">
+        <span className={`text-sm font-medium ${config.text} block mb-2`}>{config.label}鼓咆</span>
+        <div className="grid grid-cols-1 gap-2">
+          {presets.map(koho => (
+            <button
+              key={koho.name}
+              onClick={() => handlePresetSelect(type, koho)}
+              className={`p-2 rounded text-left transition-colors border ${
+                partyBuff?.type === type && partyBuff?.name === koho.name
+                  ? config.bgActive
+                  : config.bgHover
+              }`}
+            >
+              <div className={`text-sm font-medium text-${config.color}-200`}>{koho.name}</div>
+              <div className="text-xs text-stone-400">{koho.effect}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -54,67 +124,37 @@ export const KohoModal = ({ partyBuff, onSet, onClose }: KohoModalProps) => {
         <h3 className="text-lg font-bold text-stone-200 mb-4">鼓咆（全体バフ）</h3>
 
         {/* 攻撃系鼓咆 */}
-        <div className="mb-4">
-          <span className="text-sm font-medium text-orange-400 block mb-2">攻撃系鼓咆</span>
-          <div className="grid grid-cols-2 gap-2">
-            {KOHO_PRESETS.attack.map(koho => (
-              <button
-                key={koho.name}
-                onClick={() => handlePresetSelect('attack', koho)}
-                className={`p-2 rounded text-left transition-colors ${
-                  partyBuff?.type === 'attack' && partyBuff?.name === koho.name
-                    ? 'bg-orange-700 border border-orange-500'
-                    : 'bg-orange-900/50 hover:bg-orange-800/60 active:bg-orange-700/70 border border-orange-700/50'
-                }`}
-              >
-                <div className="text-sm font-medium text-orange-200">{koho.name}</div>
-                <div className="text-xs text-stone-400">{koho.effect}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderKohoSection('attack', KOHO_PRESETS.attack)}
 
         {/* 防御系鼓咆 */}
-        <div className="mb-4">
-          <span className="text-sm font-medium text-cyan-400 block mb-2">防御系鼓咆</span>
-          <div className="grid grid-cols-2 gap-2">
-            {KOHO_PRESETS.defense.map(koho => (
-              <button
-                key={koho.name}
-                onClick={() => handlePresetSelect('defense', koho)}
-                className={`p-2 rounded text-left transition-colors ${
-                  partyBuff?.type === 'defense' && partyBuff?.name === koho.name
-                    ? 'bg-cyan-700 border border-cyan-500'
-                    : 'bg-cyan-900/50 hover:bg-cyan-800/60 active:bg-cyan-700/70 border border-cyan-700/50'
-                }`}
-              >
-                <div className="text-sm font-medium text-cyan-200">{koho.name}</div>
-                <div className="text-xs text-stone-400">{koho.effect}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderKohoSection('defense', KOHO_PRESETS.defense)}
+
+        {/* 回避系鼓咆 */}
+        {renderKohoSection('evasion', KOHO_PRESETS.evasion)}
+
+        {/* 抵抗系鼓咆 */}
+        {renderKohoSection('resist', KOHO_PRESETS.resist)}
 
         {/* カスタム鼓咆 */}
         <div className="border-t border-stone-700 pt-4">
           <span className="text-sm text-stone-400 mb-2 block">カスタム鼓咆</span>
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => setCustomType('attack')}
-              className={`flex-1 py-1 rounded text-sm ${
-                customType === 'attack' ? 'bg-orange-700 text-white' : 'bg-stone-800 text-stone-400'
-              }`}
-            >
-              攻撃系
-            </button>
-            <button
-              onClick={() => setCustomType('defense')}
-              className={`flex-1 py-1 rounded text-sm ${
-                customType === 'defense' ? 'bg-cyan-700 text-white' : 'bg-stone-800 text-stone-400'
-              }`}
-            >
-              防御系
-            </button>
+          <div className="grid grid-cols-4 gap-1 mb-2">
+            {(['attack', 'defense', 'evasion', 'resist'] as KohoType[]).map(type => {
+              const config = KOHO_TYPE_CONFIG[type];
+              return (
+                <button
+                  key={type}
+                  onClick={() => setCustomType(type)}
+                  className={`py-1 rounded text-xs ${
+                    customType === type
+                      ? `bg-${config.color}-700 text-white`
+                      : 'bg-stone-800 text-stone-400'
+                  }`}
+                >
+                  {config.label}
+                </button>
+              );
+            })}
           </div>
           <input
             type="text"
@@ -132,53 +172,6 @@ export const KohoModal = ({ partyBuff, onSet, onClose }: KohoModalProps) => {
             className="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded
               text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600 mb-2"
           />
-          {customType === 'attack' ? (
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">物理ダメージ+</label>
-                <input
-                  type="number"
-                  value={customPhysDmg}
-                  onChange={(e) => setCustomPhysDmg(e.target.value)}
-                  className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded
-                    text-stone-200 text-center focus:outline-none focus:border-orange-600"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">魔法ダメージ+</label>
-                <input
-                  type="number"
-                  value={customMagicDmg}
-                  onChange={(e) => setCustomMagicDmg(e.target.value)}
-                  className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded
-                    text-stone-200 text-center focus:outline-none focus:border-orange-600"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">物理ダメージ軽減</label>
-                <input
-                  type="number"
-                  value={customPhysReduce}
-                  onChange={(e) => setCustomPhysReduce(e.target.value)}
-                  className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded
-                    text-stone-200 text-center focus:outline-none focus:border-cyan-600"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">魔法ダメージ軽減</label>
-                <input
-                  type="number"
-                  value={customMagicReduce}
-                  onChange={(e) => setCustomMagicReduce(e.target.value)}
-                  className="w-full px-2 py-1 bg-stone-700 border border-stone-600 rounded
-                    text-stone-200 text-center focus:outline-none focus:border-cyan-600"
-                />
-              </div>
-            </div>
-          )}
           <button
             onClick={handleCustomAdd}
             disabled={!customName.trim()}
