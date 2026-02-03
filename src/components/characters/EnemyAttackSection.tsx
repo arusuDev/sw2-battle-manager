@@ -4,6 +4,7 @@ import type {
     SingleEnemy,
     MultiPartEnemy,
     EnemyMagicSkill,
+    PartyBuff,
 } from '../../types';
 import { isMultiPartEnemy } from '../../types';
 import { calcBuffEffects, calcMndResist, calcDefenseValue } from '../../utils/calc';
@@ -13,6 +14,7 @@ import { getPowerDamage } from '../../utils/dice';
 interface EnemyAttackSectionProps {
     enemy: SingleEnemy | MultiPartEnemy;
     allies: AllyCharacter[];
+    partyBuff: PartyBuff | null;
     onApplyDamage: (targetId: string, damage: number) => void;
 }
 
@@ -32,6 +34,7 @@ interface EnemyAttackState {
 export const EnemyAttackSection = ({
     enemy,
     allies,
+    partyBuff,
     onApplyDamage
 }: EnemyAttackSectionProps) => {
     const [state, setState] = useState<EnemyAttackState>({
@@ -80,12 +83,22 @@ export const EnemyAttackSection = ({
     const target = allies.find(a => a.id === state.targetId);
     const targetStats = useMemo(() => {
         if (!target) return null;
-        const eff = calcBuffEffects(target.buffs);
+        const baseEff = calcBuffEffects(target.buffs);
+        // 鼓咆の効果を追加
+        const eff = { ...baseEff };
+        if (partyBuff) {
+            if (partyBuff.defense) eff.defense += partyBuff.defense;
+            if (partyBuff.defensePenalty) eff.defense -= partyBuff.defensePenalty;
+            if (partyBuff.magicReduce) eff.magicReduce += partyBuff.magicReduce;
+            if (partyBuff.damageReduce) eff.damageReduce += partyBuff.damageReduce;
+        }
         return {
             mndResist: calcMndResist(target, eff),
             defense: calcDefenseValue(target, eff),
+            magicReduce: eff.magicReduce,
+            damageReduce: eff.damageReduce,
         };
-    }, [target]);
+    }, [target, partyBuff]);
 
     const updateRoll = (index: number, field: 'd1' | 'd2', value: string) => {
         // 空文字（クリア）は許可、数値は1~6に制限
@@ -125,7 +138,7 @@ export const EnemyAttackSection = ({
         let validRolls = 0;
 
         if (state.attackType === 'physical') {
-            // 物理: 定値 + 出目合計 + 追加 - 防護
+            // 物理: 定値 + 出目合計 + 追加 - 防護 - 被ダメ軽減
             const roll = state.rolls[0];
             const d1 = parseInt(roll.d1) || 0;
             const d2 = parseInt(roll.d2) || 0;
@@ -133,7 +146,9 @@ export const EnemyAttackSection = ({
 
             totalDamage = attackParams.damage + diceTotal + state.physicalDamageBonus;
             if (targetStats) {
+                // 防護点 + 被ダメージ軽減を適用
                 totalDamage -= targetStats.defense;
+                totalDamage -= targetStats.damageReduce;
             }
         } else {
             // 魔法: 威力表 + 魔力 + 追加ダメージ
@@ -157,6 +172,12 @@ export const EnemyAttackSection = ({
             // 抵抗半減（切り上げ）
             if (state.isResisted) {
                 totalDamage = Math.ceil(totalDamage / 2);
+            }
+
+            // 魔法ダメージ軽減 + 被ダメージ軽減を適用（抵抗半減後）
+            if (targetStats) {
+                totalDamage -= targetStats.magicReduce;
+                totalDamage -= targetStats.damageReduce;
             }
         }
 
@@ -423,9 +444,20 @@ export const EnemyAttackSection = ({
                             const d1 = parseInt(roll.d1) || 0;
                             const d2 = parseInt(roll.d2) || 0;
                             const diceTotal = (roll.d1 !== '' || roll.d2 !== '') ? d1 + d2 : 0;
-                            return `定値${attackParams.damage} + 出目${diceTotal} + 追加${state.physicalDamageBonus} - 防護${targetStats?.defense ?? 0}`;
+                            const damageReduce = targetStats?.damageReduce ?? 0;
+                            let formula = `定値${attackParams.damage} + 出目${diceTotal} + 追加${state.physicalDamageBonus} - 防護${targetStats?.defense ?? 0}`;
+                            if (damageReduce > 0) formula += ` - 軽減${damageReduce}`;
+                            return formula;
                         })()
-                        : `威力表 + 魔力${attackParams.magicPower} + 追加${state.magicDamageBonus} ${state.isResisted ? '/ 2' : ''}`
+                        : (() => {
+                            const magicReduce = targetStats?.magicReduce ?? 0;
+                            const damageReduce = targetStats?.damageReduce ?? 0;
+                            let formula = `威力表 + 魔力${attackParams.magicPower} + 追加${state.magicDamageBonus}`;
+                            if (state.isResisted) formula += ' / 2';
+                            if (magicReduce > 0) formula += ` - 魔軽${magicReduce}`;
+                            if (damageReduce > 0) formula += ` - 軽減${damageReduce}`;
+                            return formula;
+                        })()
                     }
                 </div>
                 <button

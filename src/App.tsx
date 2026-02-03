@@ -416,6 +416,7 @@ function BattleScreen() {
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
                         allies={allies}
+                        partyBuff={partyBuff}
                         onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     ) : (
@@ -428,6 +429,7 @@ function BattleScreen() {
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
                         allies={allies}
+                        partyBuff={partyBuff}
                         onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     )

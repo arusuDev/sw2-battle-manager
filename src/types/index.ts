@@ -31,7 +31,7 @@ export type BuffType =
   | 'hit' | 'dodge' | 'defense'
   | 'vitResist' | 'mndResist'
   | 'strBonus' | 'power' | 'magicPower'
-  | 'magicDefense' | 'physicalReduce' | 'magicReduce'
+  | 'magicDefense' | 'physicalReduce' | 'magicReduce' | 'damageReduce'
   | 'dex' | 'agi' | 'str' | 'vit' | 'int' | 'mnd';
 
 // バフ/デバフ
@@ -58,6 +58,7 @@ export interface BuffEffects {
   magicDefense: number;
   physicalReduce: number;
   magicReduce: number;
+  damageReduce: number;  // 被ダメージ軽減（全て）
   dex: number;
   agi: number;
   str: number;

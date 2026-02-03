@@ -7,7 +7,7 @@
 // ============================================
 
 import { useState } from 'react';
-import type { MultiPartEnemy, Part, AllyCharacter, Character } from '../../types';
+import type { MultiPartEnemy, Part, AllyCharacter, Character, PartyBuff } from '../../types';
 import { getHpBarColor, getHpPercent } from '../../utils/calc';
 import { EnemyAttackSection } from './EnemyAttackSection';
 import { BuffBadge } from './BuffBadge';
@@ -19,6 +19,7 @@ interface MultiPartEnemyCardProps {
   onAddBuff: (character: MultiPartEnemy) => void;
   onRemoveBuff: (charId: string, buffId: string, partId?: string) => void;
   allies?: Character[];  // 味方一覧（ターゲット候補）
+  partyBuff?: PartyBuff | null;
   onEnemyAttackDamage?: (targetId: string, damage: number) => void;
 }
 
@@ -29,6 +30,7 @@ export const MultiPartEnemyCard = ({
   onAddBuff,
   onRemoveBuff,
   allies = [],
+  partyBuff,
   onEnemyAttackDamage
 }: MultiPartEnemyCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -342,6 +344,7 @@ export const MultiPartEnemyCard = ({
           <EnemyAttackSection
             enemy={character}
             allies={allies as AllyCharacter[]}
+            partyBuff={partyBuff ?? null}
             onApplyDamage={onEnemyAttackDamage}
           />
         </div>
