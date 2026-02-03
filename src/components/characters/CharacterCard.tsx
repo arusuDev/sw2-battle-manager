@@ -74,7 +74,25 @@ export const CharacterCard = ({
   const stats = isAlly(character) ? character.stats : { dex: 12, agi: 12, str: 12, vit: 12, int: 12, mnd: 12 };
   const skillLevels = isAlly(character) ? character.skillLevels : {};
   const advLv = calcAdventurerLevel(skillLevels);
-  const buffEffects = calcBuffEffects(buffs);
+
+  // バフ効果の計算（キャラクターのバフ + 鼓咆効果）
+  const baseBuffEffects = calcBuffEffects(buffs);
+  const buffEffects = { ...baseBuffEffects };
+
+  // 味方キャラクターに鼓咆の効果を適用
+  if (isAlly(character) && partyBuff) {
+    // ボーナス
+    if (partyBuff.hit) buffEffects.hit += partyBuff.hit;
+    if (partyBuff.dodge) buffEffects.dodge += partyBuff.dodge;
+    if (partyBuff.defense) buffEffects.defense += partyBuff.defense;
+    if (partyBuff.vitResist) buffEffects.vitResist += partyBuff.vitResist;
+    if (partyBuff.mndResist) buffEffects.mndResist += partyBuff.mndResist;
+    // ペナルティ
+    if (partyBuff.dodgePenalty) buffEffects.dodge -= partyBuff.dodgePenalty;
+    if (partyBuff.defensePenalty) buffEffects.defense -= partyBuff.defensePenalty;
+    if (partyBuff.vitResistPenalty) buffEffects.vitResist -= partyBuff.vitResistPenalty;
+    if (partyBuff.mndResistPenalty) buffEffects.mndResist -= partyBuff.mndResistPenalty;
+  }
 
   // HP/MP（単体のみ）
   const hp = isSingleEnemy(character) || isAlly(character) ? character.hp : { current: 0, max: 0 };
