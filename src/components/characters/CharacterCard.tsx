@@ -347,13 +347,14 @@ export const CharacterCard = ({
             const buffBonus = buffEffects[key] || 0;
             const totalValue = baseValue + buffBonus;
             const bonus = Math.floor(totalValue / 6);
+            const baseBonus = Math.floor(baseValue / 6);
             return (
               <div key={key} className="bg-stone-800/50 rounded px-1 py-1">
                 <div className="text-xs text-stone-500">{labels[key]}</div>
                 <div className={`text-sm ${buffBonus > 0 ? 'text-green-400' : buffBonus < 0 ? 'text-red-400' : 'text-stone-300'}`}>
                   {totalValue}
                 </div>
-                <div className="text-xs text-amber-400">B:{bonus}</div>
+                <div className={`text-xs ${getStatColor(bonus, baseBonus, 'text-amber-400')}`}>B:{bonus}</div>
               </div>
             );
           })}
