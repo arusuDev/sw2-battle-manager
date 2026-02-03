@@ -74,7 +74,27 @@ export const CharacterCard = ({
   const stats = isAlly(character) ? character.stats : { dex: 12, agi: 12, str: 12, vit: 12, int: 12, mnd: 12 };
   const skillLevels = isAlly(character) ? character.skillLevels : {};
   const advLv = calcAdventurerLevel(skillLevels);
-  const buffEffects = calcBuffEffects(buffs);
+
+  // バフ効果の計算（キャラクターのバフ + 鼓咆効果）
+  const baseBuffEffects = calcBuffEffects(buffs);
+  const buffEffects = { ...baseBuffEffects };
+
+  // 味方キャラクターに鼓咆の効果を適用
+  if (isAlly(character) && partyBuff) {
+    // ボーナス
+    if (partyBuff.hit) buffEffects.hit += partyBuff.hit;
+    if (partyBuff.dodge) buffEffects.dodge += partyBuff.dodge;
+    if (partyBuff.defense) buffEffects.defense += partyBuff.defense;
+    if (partyBuff.vitResist) buffEffects.vitResist += partyBuff.vitResist;
+    if (partyBuff.mndResist) buffEffects.mndResist += partyBuff.mndResist;
+    if (partyBuff.magicReduce) buffEffects.magicReduce += partyBuff.magicReduce;
+    if (partyBuff.damageReduce) buffEffects.damageReduce += partyBuff.damageReduce;
+    // ペナルティ
+    if (partyBuff.dodgePenalty) buffEffects.dodge -= partyBuff.dodgePenalty;
+    if (partyBuff.defensePenalty) buffEffects.defense -= partyBuff.defensePenalty;
+    if (partyBuff.vitResistPenalty) buffEffects.vitResist -= partyBuff.vitResistPenalty;
+    if (partyBuff.mndResistPenalty) buffEffects.mndResist -= partyBuff.mndResistPenalty;
+  }
 
   // HP/MP（単体のみ）
   const hp = isSingleEnemy(character) || isAlly(character) ? character.hp : { current: 0, max: 0 };
@@ -373,39 +393,61 @@ export const CharacterCard = ({
         const vitResBase = calcVitResist(character, ZERO_BUFF_EFFECTS);
         const mndResVal = calcMndResist(character, buffEffects);
         const mndResBase = calcMndResist(character, ZERO_BUFF_EFFECTS);
+        // 軽減値
+        const magicReduceVal = buffEffects.magicReduce;
+        const damageReduceVal = buffEffects.damageReduce;
         return (
-          <div className="grid grid-cols-5 gap-1 mb-3 text-center">
-            <div className="bg-stone-800/50 rounded px-1 py-1">
-              <div className="text-xs text-stone-500">命中</div>
-              <div className={`text-sm ${getStatColor(hitVal, hitBase, 'text-stone-200')}`}>
-                {hitVal}
+          <>
+            <div className="grid grid-cols-5 gap-1 mb-2 text-center">
+              <div className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">命中</div>
+                <div className={`text-sm ${getStatColor(hitVal, hitBase, 'text-stone-200')}`}>
+                  {hitVal}
+                </div>
+              </div>
+              <div className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">回避</div>
+                <div className={`text-sm ${getStatColor(dodgeVal, dodgeBase, 'text-stone-200')}`}>
+                  {dodgeVal}
+                </div>
+              </div>
+              <div className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">防護</div>
+                <div className={`text-sm ${getStatColor(defVal, defBase, 'text-stone-200')}`}>
+                  {defVal}
+                </div>
+              </div>
+              <div className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">生抵</div>
+                <div className={`text-sm ${getStatColor(vitResVal, vitResBase, 'text-stone-200')}`}>
+                  {vitResVal}
+                </div>
+              </div>
+              <div className="bg-stone-800/50 rounded px-1 py-1">
+                <div className="text-xs text-stone-500">精抵</div>
+                <div className={`text-sm ${getStatColor(mndResVal, mndResBase, 'text-stone-200')}`}>
+                  {mndResVal}
+                </div>
               </div>
             </div>
-            <div className="bg-stone-800/50 rounded px-1 py-1">
-              <div className="text-xs text-stone-500">回避</div>
-              <div className={`text-sm ${getStatColor(dodgeVal, dodgeBase, 'text-stone-200')}`}>
-                {dodgeVal}
+            {/* ダメージ軽減（値がある場合のみ表示） */}
+            {(magicReduceVal > 0 || damageReduceVal > 0) && (
+              <div className="grid grid-cols-2 gap-1 mb-3 text-center">
+                <div className="bg-indigo-900/30 rounded px-1 py-1 border border-indigo-800/30">
+                  <div className="text-xs text-indigo-400">魔法軽減</div>
+                  <div className="text-sm text-indigo-300">
+                    {magicReduceVal > 0 ? `-${magicReduceVal}` : '0'}
+                  </div>
+                </div>
+                <div className="bg-cyan-900/30 rounded px-1 py-1 border border-cyan-800/30">
+                  <div className="text-xs text-cyan-400">被ダメ軽減</div>
+                  <div className="text-sm text-cyan-300">
+                    {damageReduceVal > 0 ? `-${damageReduceVal}` : '0'}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-stone-800/50 rounded px-1 py-1">
-              <div className="text-xs text-stone-500">防護</div>
-              <div className={`text-sm ${getStatColor(defVal, defBase, 'text-stone-200')}`}>
-                {defVal}
-              </div>
-            </div>
-            <div className="bg-stone-800/50 rounded px-1 py-1">
-              <div className="text-xs text-stone-500">生抵</div>
-              <div className={`text-sm ${getStatColor(vitResVal, vitResBase, 'text-stone-200')}`}>
-                {vitResVal}
-              </div>
-            </div>
-            <div className="bg-stone-800/50 rounded px-1 py-1">
-              <div className="text-xs text-stone-500">精抵</div>
-              <div className={`text-sm ${getStatColor(mndResVal, mndResBase, 'text-stone-200')}`}>
-                {mndResVal}
-              </div>
-            </div>
-          </div>
+            )}
+          </>
         );
       })()}
 
@@ -478,6 +520,7 @@ export const CharacterCard = ({
         <EnemyAttackSection
           enemy={character as SingleEnemy | MultiPartEnemy}
           allies={allies as AllyCharacter[]}
+          partyBuff={partyBuff ?? null}
           onApplyDamage={onEnemyAttackDamage}
         />
       )}

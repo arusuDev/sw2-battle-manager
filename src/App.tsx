@@ -209,42 +209,6 @@ function BattleScreen() {
     setShowBulkBuffModal(false);
   };
 
-  // 鼓咆一括解除
-  const handleBulkRemoveKoho = async (targets: BulkBuffTarget[]) => {
-    // 同一キャラの複数部位を一括更新するため、characterIdでグルーピング
-    const targetsByCharId = new Map<string, BulkBuffTarget[]>();
-    for (const target of targets) {
-      const list = targetsByCharId.get(target.characterId) || [];
-      list.push(target);
-      targetsByCharId.set(target.characterId, list);
-    }
-
-    for (const [charId, charTargets] of targetsByCharId) {
-      const char = characters.find(c => c.id === charId);
-      if (!char) continue;
-
-      const hasPartTargets = charTargets.some(t => t.partId);
-
-      if (hasPartTargets && isMultiPartEnemy(char)) {
-        // 複数部位敵の選択された全部位から鼓咆を一括削除
-        const selectedPartIds = new Set(charTargets.map(t => t.partId).filter(Boolean));
-        const updatedParts = char.parts.map(part => {
-          if (selectedPartIds.has(part.id)) {
-            const newBuffs = (part.buffs || []).filter(b => !b.isKoho);
-            return { ...part, buffs: newBuffs };
-          }
-          return part;
-        });
-        await updateCharacter({ ...char, parts: updatedParts });
-      } else {
-        // 通常キャラから鼓咆を削除
-        const newBuffs = (char.buffs || []).filter(b => !b.isKoho);
-        await updateCharacter({ ...char, buffs: newBuffs });
-      }
-    }
-    setShowBulkBuffModal(false);
-  };
-
   // ============================================
   // Damage Application
   // ============================================
@@ -361,10 +325,14 @@ function BattleScreen() {
           </div>
           <div className="flex flex-wrap gap-2">
             {partyBuff ? (
-              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs
+              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border
                 ${partyBuff.type === 'attack'
-                  ? 'bg-orange-900/50 text-orange-300 border border-orange-700/50'
-                  : 'bg-cyan-900/50 text-cyan-300 border border-cyan-700/50'
+                  ? 'bg-orange-900/50 text-orange-300 border-orange-700/50'
+                  : partyBuff.type === 'defense'
+                  ? 'bg-cyan-900/50 text-cyan-300 border-cyan-700/50'
+                  : partyBuff.type === 'evasion'
+                  ? 'bg-green-900/50 text-green-300 border-green-700/50'
+                  : 'bg-purple-900/50 text-purple-300 border-purple-700/50'
                 }`}
               >
                 <span className="font-medium">{partyBuff.name}</span>
@@ -378,7 +346,7 @@ function BattleScreen() {
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-stone-600">なし（攻撃系・防御系から1つずつ設定可能）</span>
+              <span className="text-xs text-stone-600">なし（4種類から1つ設定可能）</span>
             )}
           </div>
         </div>
@@ -448,6 +416,7 @@ function BattleScreen() {
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
                         allies={allies}
+                        partyBuff={partyBuff}
                         onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     ) : (
@@ -460,6 +429,7 @@ function BattleScreen() {
                         onAddBuff={setAddingBuffChar}
                         onRemoveBuff={handleRemoveBuff}
                         allies={allies}
+                        partyBuff={partyBuff}
                         onEnemyAttackDamage={handleEnemyAttackDamage}
                       />
                     )
@@ -522,7 +492,6 @@ function BattleScreen() {
         <BulkBuffModal
           characters={characters}
           onApply={handleBulkBuffApply}
-          onRemoveKoho={handleBulkRemoveKoho}
           onClose={() => setShowBulkBuffModal(false)}
         />
       )}

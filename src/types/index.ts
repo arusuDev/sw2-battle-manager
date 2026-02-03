@@ -31,7 +31,7 @@ export type BuffType =
   | 'hit' | 'dodge' | 'defense'
   | 'vitResist' | 'mndResist'
   | 'strBonus' | 'power' | 'magicPower'
-  | 'magicDefense' | 'physicalReduce' | 'magicReduce'
+  | 'magicDefense' | 'physicalReduce' | 'magicReduce' | 'damageReduce'
   | 'dex' | 'agi' | 'str' | 'vit' | 'int' | 'mnd';
 
 // バフ/デバフ
@@ -58,6 +58,7 @@ export interface BuffEffects {
   magicDefense: number;
   physicalReduce: number;
   magicReduce: number;
+  damageReduce: number;  // 被ダメージ軽減（全て）
   dex: number;
   agi: number;
   str: number;
@@ -162,23 +163,55 @@ export const isMultiPartEnemy = (char: Character): char is MultiPartEnemy => {
 
 // 鼓咆（全体バフ）
 export interface PartyBuff {
-  type: 'attack' | 'defense';
+  type: 'attack' | 'defense' | 'evasion' | 'resist';
   name: string;
   effect: string;
-  physicalDamage?: number;
-  magicDamage?: number;
-  physicalReduce?: number;
-  magicReduce?: number;
+  // 攻撃系
+  physicalDamage?: number;      // 物理ダメージ+
+  magicDamage?: number;         // 魔法ダメージ+
+  hit?: number;                 // 命中力+
+  // 防御系
+  defense?: number;             // 防護点+
+  physicalReduce?: number;      // 受ける物理ダメージ軽減
+  magicReduce?: number;         // 受ける魔法ダメージ軽減
+  // 回避系
+  dodge?: number;               // 回避力+
+  damageReduce?: number;        // 被ダメージ軽減（全て）
+  // 抵抗系
+  vitResist?: number;           // 生命抵抗力+
+  mndResist?: number;           // 精神抵抗力+
+  // ペナルティ
+  dodgePenalty?: number;        // 回避力-（攻撃系ペナルティ）
+  defensePenalty?: number;      // 防護点-（回避系ペナルティ）
+  physicalDamagePenalty?: number; // 与える物理ダメージ-（防御系ペナルティ）
+  vitResistPenalty?: number;    // 生命抵抗力-（抵抗系ペナルティ）
+  mndResistPenalty?: number;    // 精神抵抗力-（抵抗系ペナルティ）
 }
 
 // 鼓咆プリセット
 export interface KohoPreset {
   name: string;
   effect: string;
+  // 攻撃系
   physicalDamage?: number;
   magicDamage?: number;
+  hit?: number;
+  // 防御系
+  defense?: number;
   physicalReduce?: number;
   magicReduce?: number;
+  // 回避系
+  dodge?: number;
+  damageReduce?: number;
+  // 抵抗系
+  vitResist?: number;
+  mndResist?: number;
+  // ペナルティ
+  dodgePenalty?: number;
+  defensePenalty?: number;
+  physicalDamagePenalty?: number;
+  vitResistPenalty?: number;
+  mndResistPenalty?: number;
 }
 
 // プリセット練技

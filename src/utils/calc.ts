@@ -29,6 +29,7 @@ export const calcBuffEffects = (buffs: Buff[]): BuffEffects => {
     magicDefense: 0,
     physicalReduce: 0,
     magicReduce: 0,
+    damageReduce: 0,  // 被ダメージ軽減
     dex: 0,
     agi: 0,
     str: 0,
@@ -204,7 +205,7 @@ export const ZERO_BUFF_EFFECTS: BuffEffects = {
   hit: 0, dodge: 0, defense: 0,
   vitResist: 0, mndResist: 0,
   strBonus: 0, power: 0, magicPower: 0,
-  magicDefense: 0, physicalReduce: 0, magicReduce: 0,
+  magicDefense: 0, physicalReduce: 0, magicReduce: 0, damageReduce: 0,
   dex: 0, agi: 0, str: 0, vit: 0, int: 0, mnd: 0,
 };
 

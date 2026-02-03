@@ -47,7 +47,14 @@ export const AttackSection = ({
     });
 
     const { stats, skillLevels, buffs } = character;
-    const buffEffects = calcBuffEffects(buffs);
+    const baseBuffEffects = calcBuffEffects(buffs);
+
+    // 鼓咆の効果をbuffEffectsに追加（命中力のみ、ダメージはgetKohoBonusで処理）
+    const buffEffects = { ...baseBuffEffects };
+    if (partyBuff) {
+        // 命中力ボーナス
+        if (partyBuff.hit) buffEffects.hit += partyBuff.hit;
+    }
 
     // ============================================
     // 計算関数
@@ -97,14 +104,27 @@ export const AttackSection = ({
         }
     };
 
-    // 鼓咆ボーナス取得
+    // 鼓咆ボーナス取得（攻撃系のダメージボーナス - 防御系の与ダメージペナルティ）
     const getKohoBonus = (): number => {
-        if (!partyBuff || partyBuff.type !== 'attack') return 0;
-        if (attackCalc.attackType === 'physical') {
-            return partyBuff.physicalDamage || 0;
-        } else {
-            return partyBuff.magicDamage || 0;
+        if (!partyBuff) return 0;
+
+        let bonus = 0;
+
+        // 攻撃系の鼓咆：物理/魔法ダメージボーナス
+        if (partyBuff.type === 'attack') {
+            if (attackCalc.attackType === 'physical') {
+                bonus += partyBuff.physicalDamage || 0;
+            } else {
+                bonus += partyBuff.magicDamage || 0;
+            }
         }
+
+        // 防御系の鼓咆：与ダメージペナルティ（物理のみ）
+        if (partyBuff.type === 'defense' && attackCalc.attackType === 'physical') {
+            bonus -= partyBuff.physicalDamagePenalty || 0;
+        }
+
+        return bonus;
     };
 
     // 自動ダイスロール
@@ -320,8 +340,10 @@ export const AttackSection = ({
                             ? ` (技能${skillLevels[attackCalc.selectedSkill]}+筋力B)`
                             : ` (魔力)`
                         }
-                        {getKohoBonus() > 0 && (
-                            <span className="text-orange-400"> +鼓咆{getKohoBonus()}</span>
+                        {getKohoBonus() !== 0 && (
+                            <span className={getKohoBonus() > 0 ? "text-orange-400" : "text-red-400"}>
+                                {' '}{getKohoBonus() > 0 ? '+' : ''}鼓咆{getKohoBonus()}
+                            </span>
                         )}
                     </div>
                 </div>
@@ -470,7 +492,7 @@ export const AttackSection = ({
                         </div>
                         <div className="text-xs text-stone-500 text-center mt-1">
                             威力{damageResult.powerDamage} + 追加{extraDamage} - 防御{defense}
-                            {kohoBonus > 0 && ` + 鼓咆${kohoBonus}`}
+                            {kohoBonus !== 0 && ` ${kohoBonus > 0 ? '+' : ''} 鼓咆${kohoBonus}`}
                             {weaknessBonus > 0 && ` + 弱点${weaknessBonus}${attackCalc.isWeaknessExploit ? '(看破)' : ''}`}
                         </div>
 

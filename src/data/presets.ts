@@ -20,13 +20,38 @@ export const PRESET_SKILLS: PresetSkill[] = [
 export const KOHO_PRESETS: {
   attack: KohoPreset[];
   defense: KohoPreset[];
+  evasion: KohoPreset[];
+  resist: KohoPreset[];
 } = {
+  // 攻撃系
   attack: [
-    { name: '怒涛の攻陣', effect: '物理ダメージ+2', physicalDamage: 2, magicDamage: 0 },
-    { name: '堅陣の攻陣', effect: '物理ダメージ+1', physicalDamage: 1, magicDamage: 0 },
+    { name: '怒涛の攻陣I', effect: '物理ダメージ+2 回避力-1', physicalDamage: 2, dodgePenalty: 1 },
+    { name: '怒涛の攻陣II：烈火', effect: '物理ダメージ+2', physicalDamage: 2 },
+    { name: '怒涛の攻陣II：旋風', effect: '命中力+1', hit: 1 },
+    { name: '怒涛の攻陣III：轟炎', effect: '物理ダメージ+3', physicalDamage: 3 },
+    { name: '怒涛の攻陣III：旋刃', effect: '物理ダメージ+1 命中力+1', physicalDamage: 1, hit: 1 },
   ],
+  // 防御系
   defense: [
-    { name: '鉄壁の防陣', effect: '物理ダメージ-1, 魔法ダメージ-1', physicalReduce: 1, magicReduce: 1 },
-    { name: '金剛の防陣', effect: '物理ダメージ-2', physicalReduce: 2, magicReduce: 0 },
-  ]
+    { name: '鉄壁の防陣I', effect: '防護点+2 与物理ダメージ-2', defense: 2, physicalDamagePenalty: 2 },
+    { name: '鉄壁の防陣II：鉄鎧', effect: '防護点+2', defense: 2 },
+    { name: '鉄壁の防陣II：堅体', effect: '防護点+1 受魔法ダメージ-1', defense: 1, magicReduce: 1 },
+    { name: '鉄壁の防陣III：鋼鎧', effect: '防護点+3', defense: 3 },
+    { name: '鉄壁の防陣III：甲盾', effect: '防護点+2 受魔法ダメージ-2', defense: 2, magicReduce: 2 },
+  ],
+  // 回避系
+  evasion: [
+    { name: '流麗なる俊陣I', effect: '回避力+1 防護点-2', dodge: 1, defensePenalty: 2 },
+    { name: '流麗なる俊陣II：陽炎', effect: '回避力+1', dodge: 1 },
+    { name: '流麗なる俊陣II：流水', effect: '回避力+2 防護点-2', dodge: 2, defensePenalty: 2 },
+    { name: '流麗なる俊陣III：浮身', effect: '回避力+1 被ダメージ-1', dodge: 1, damageReduce: 1 },
+    { name: '流麗なる俊陣III：幻惑', effect: '回避力+2', dodge: 2 },
+  ],
+  // 抵抗系
+  resist: [
+    { name: '強靭なる丈陣I：抵体', effect: '生命抵抗力+1 精神抵抗力-1', vitResist: 1, mndResistPenalty: 1 },
+    { name: '強靭なる丈陣I：抵心', effect: '精神抵抗力+1 生命抵抗力-1', mndResist: 1, vitResistPenalty: 1 },
+    { name: '強靭なる丈陣II：強身', effect: '生命抵抗力+2 精神抵抗力-1', vitResist: 2, mndResistPenalty: 1 },
+    { name: '強靭なる丈陣II：安精', effect: '精神抵抗力+2 生命抵抗力-1', mndResist: 2, vitResistPenalty: 1 },
+  ],
 };
