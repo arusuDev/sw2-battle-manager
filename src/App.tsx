@@ -325,10 +325,14 @@ function BattleScreen() {
           </div>
           <div className="flex flex-wrap gap-2">
             {partyBuff ? (
-              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs
+              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border
                 ${partyBuff.type === 'attack'
-                  ? 'bg-orange-900/50 text-orange-300 border border-orange-700/50'
-                  : 'bg-cyan-900/50 text-cyan-300 border border-cyan-700/50'
+                  ? 'bg-orange-900/50 text-orange-300 border-orange-700/50'
+                  : partyBuff.type === 'defense'
+                  ? 'bg-cyan-900/50 text-cyan-300 border-cyan-700/50'
+                  : partyBuff.type === 'evasion'
+                  ? 'bg-green-900/50 text-green-300 border-green-700/50'
+                  : 'bg-purple-900/50 text-purple-300 border-purple-700/50'
                 }`}
               >
                 <span className="font-medium">{partyBuff.name}</span>
@@ -342,7 +346,7 @@ function BattleScreen() {
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-stone-600">なし（攻撃系・防御系から1つずつ設定可能）</span>
+              <span className="text-xs text-stone-600">なし（4種類から1つ設定可能）</span>
             )}
           </div>
         </div>
