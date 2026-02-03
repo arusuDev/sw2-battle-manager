@@ -62,31 +62,31 @@ export const KohoModal = ({ partyBuff, onSet, onClose }: KohoModalProps) => {
   );
 
   const handlePresetSelect = (type: KohoType, koho: KohoPreset) => {
-    onSet({
+    // Firestoreはundefinedを保存できないため、定義された値のみを含むオブジェクトを作成
+    const buff: PartyBuff = {
       type,
       name: koho.name,
       effect: koho.effect,
-      // 攻撃系
-      physicalDamage: koho.physicalDamage,
-      magicDamage: koho.magicDamage,
-      hit: koho.hit,
-      // 防御系
-      defense: koho.defense,
-      physicalReduce: koho.physicalReduce,
-      magicReduce: koho.magicReduce,
-      // 回避系
-      dodge: koho.dodge,
-      damageReduce: koho.damageReduce,
-      // 抵抗系
-      vitResist: koho.vitResist,
-      mndResist: koho.mndResist,
-      // ペナルティ
-      dodgePenalty: koho.dodgePenalty,
-      defensePenalty: koho.defensePenalty,
-      physicalDamagePenalty: koho.physicalDamagePenalty,
-      vitResistPenalty: koho.vitResistPenalty,
-      mndResistPenalty: koho.mndResistPenalty,
-    });
+    };
+
+    // 定義されている値のみを追加
+    if (koho.physicalDamage !== undefined) buff.physicalDamage = koho.physicalDamage;
+    if (koho.magicDamage !== undefined) buff.magicDamage = koho.magicDamage;
+    if (koho.hit !== undefined) buff.hit = koho.hit;
+    if (koho.defense !== undefined) buff.defense = koho.defense;
+    if (koho.physicalReduce !== undefined) buff.physicalReduce = koho.physicalReduce;
+    if (koho.magicReduce !== undefined) buff.magicReduce = koho.magicReduce;
+    if (koho.dodge !== undefined) buff.dodge = koho.dodge;
+    if (koho.damageReduce !== undefined) buff.damageReduce = koho.damageReduce;
+    if (koho.vitResist !== undefined) buff.vitResist = koho.vitResist;
+    if (koho.mndResist !== undefined) buff.mndResist = koho.mndResist;
+    if (koho.dodgePenalty !== undefined) buff.dodgePenalty = koho.dodgePenalty;
+    if (koho.defensePenalty !== undefined) buff.defensePenalty = koho.defensePenalty;
+    if (koho.physicalDamagePenalty !== undefined) buff.physicalDamagePenalty = koho.physicalDamagePenalty;
+    if (koho.vitResistPenalty !== undefined) buff.vitResistPenalty = koho.vitResistPenalty;
+    if (koho.mndResistPenalty !== undefined) buff.mndResistPenalty = koho.mndResistPenalty;
+
+    onSet(buff);
     onClose();
   };
 
